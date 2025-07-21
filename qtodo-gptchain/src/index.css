@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-black text-green-500 font-mono min-h-screen flex items-center justify-center;
+}
+
+.blink::after {
+  content: '_';
+  animation: blink 1s steps(2, start) infinite;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
