@@ -3,18 +3,31 @@
 Because building a normal to-do app would have been too easy, this project leans hard
 into unnecessary complexity.
 
-## Features you'll brag about (to no one)
+## Feature Rundown
 
-- **Quantum-powered procrastination**: tasks reshuffle once a day using *actual* quantum
-  randomness. Your chores literally move at the whims of physics.
-- **Haiku-based clarity**: every task you add is politely mangled into an ambiguous
-  haiku by the OpenAI API. Because nothing says "productivity" like decoding your own
-  poetry.
-- **Blinking ASCII art**: a retro banner with a fake terminal cursor just to prove we
-  spent time on the wrong things.
-- **LocalStorage persistence**: your poetic chores survive page refreshes, lucky you.
-- **React + Vite + Tailwind**: all the modern web tooling you never needed to manage a
-  handful of checkboxes.
+This is the todo list app absolutely no one needs, yet here we are.
+
+- **Quantum-powered procrastination** – once per day tasks are reshuffled using
+  genuine quantum random numbers, so the universe decides your priorities.
+- **Haiku-based clarity** – each task is sent to the OpenAI API and returned as an
+  ambiguously poetic haiku. Understanding the checklist is half the battle.
+- **Task expiration** – give a task a deadline; once it passes, the task becomes
+  undeletable, a haunting reminder of your unfinished ambitions.
+- **Blinking ASCII art** – because a todo app without terminal nostalgia is hardly
+  worth opening.
+- **LocalStorage persistence** – your list survives refreshes and browser restarts so
+  you can keep not doing things indefinitely.
+- **Modern stack** – built with React, Vite and TailwindCSS for absolutely no reason
+  other than we could.
+
+### Testing
+
+The app now ships with Vitest and React Testing Library.
+
+```bash
+cd qtodo-gptchain
+npm test
+```
 
 ## Development
 

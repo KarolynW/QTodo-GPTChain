@@ -123,6 +123,7 @@ function App() {
         />
         <input
           type="datetime-local"
+          aria-label="expiry"
           value={expiryDate}
           onChange={(e) => setExpiryDate(e.target.value)}
           className="bg-black border border-green-500 px-2 py-1"
