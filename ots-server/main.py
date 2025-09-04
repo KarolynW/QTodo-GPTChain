@@ -1,8 +1,10 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 import base64
 import os
 import logging
+import sqlite3
 from web3 import Web3
 from opentimestamps.client import Client
 
@@ -11,6 +13,28 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 client = Client()
+
+ASCII_ART = r"""
+   ____  __________  ____   ____
+  / __ \|___  / __ \|  _ \ / __ \
+ | |  | | / / |  | | |_) | |  | |
+ | |  | |/ /| |  | |  _ <| |  | |
+ | |__| / /__| |__| | |_) | |__| |
+  \____/_____|\____/|____/ \____/
+
+ QTodo Retro Server - 1990s Edition
+"""
+
+print(ASCII_ART)
+
+db = sqlite3.connect('todo.db', check_same_thread=False)
+db.execute(
+    'CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password TEXT)'
+)
+db.execute(
+    'CREATE TABLE IF NOT EXISTS todos (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, text TEXT, done INTEGER DEFAULT 0, created TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(user_id) REFERENCES users(id))'
+)
+db.commit()
 
 # This server exists mainly so hashes can feel important before fading into
 # obscurity. Think of it as a timestamping spa.
@@ -269,3 +293,49 @@ def verify_anchor(req: AnchorVerifyReq):
     except Exception:
         logger.exception('EVM verify failed')
         raise HTTPException(status_code=500, detail='EVM verify failed')
+
+
+class UserReq(BaseModel):
+    username: str
+    password: str
+
+
+class TodoReq(BaseModel):
+    user_id: int
+    text: str
+
+
+@app.get('/')
+def root():
+    return PlainTextResponse(ASCII_ART)
+
+
+@app.post('/users/register')
+def register(user: UserReq):
+    cur = db.cursor()
+    try:
+        cur.execute('INSERT INTO users (username, password) VALUES (?, ?)', (user.username, user.password))
+        db.commit()
+        return {'id': cur.lastrowid}
+    except sqlite3.IntegrityError:
+        raise HTTPException(status_code=400, detail='username taken')
+
+
+@app.post('/todos/add')
+def add_todo(todo: TodoReq):
+    cur = db.cursor()
+    cur.execute('INSERT INTO todos (user_id, text) VALUES (?, ?)', (todo.user_id, todo.text))
+    db.commit()
+    return {'id': cur.lastrowid}
+
+
+@app.get('/todos/{user_id}')
+def list_todos(user_id: int):
+    cur = db.cursor()
+    cur.execute('SELECT id, text, done, created FROM todos WHERE user_id = ?', (user_id,))
+    rows = cur.fetchall()
+    todos = [
+        {'id': r[0], 'text': r[1], 'done': bool(r[2]), 'created': r[3]}
+        for r in rows
+    ]
+    return {'todos': todos}
