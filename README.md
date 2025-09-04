@@ -32,6 +32,8 @@ checkbox and a database table were enough, brace yourself.
   string on-chain and bask in the permanence.
 - **Blinking ASCII art** – because a todo app without terminal nostalgia is hardly
   worth opening. Bring your own CRT monitor for maximum effect.
+- **SQLite-backed madness** – a tiny FastAPI service keeps user accounts and todos
+  in a real database, which obviously prints ASCII art when it boots.
 - **LocalStorage persistence** – your list survives refreshes and browser restarts so
   you can keep not doing things indefinitely. Congratulations, you've invented memory.
 - **Modern stack** – built with React, Vite and TailwindCSS for absolutely no reason
@@ -66,13 +68,21 @@ npm test
 If those tests pass, feel free to frame the output and mail it to your future self
 as proof you once had things under control.
 
-### OpenTimestamps Server
+### OpenTimestamps & Retro DB Server
 
 ```bash
 cd ots-server
 pip install -r requirements.txt
 uvicorn main:app --reload
 ```
+
+This same FastAPI app now moonlights as a tiny SQLite-backed database. It
+prints out chunky ASCII art on startup and exposes a few endpoints so brave
+users can register accounts and stash todos:
+
+- `POST /users/register` – create a user with `username` and `password`
+- `POST /todos/add` – add a todo for a given `user_id`
+- `GET /todos/{user_id}` – list all todos for that user
 
 To indulge the EVM anchoring, set the following environment variables so the
 server knows how to reach your chosen testnet:
