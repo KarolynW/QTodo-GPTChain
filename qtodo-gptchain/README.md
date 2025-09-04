@@ -15,6 +15,8 @@ identity crisis.
 - Expired tasks can be timestamped with OpenTimestamps. The app hashes the task locally
   and sends only the hash to a small FastAPI helper for proof creation, verification and
   upgrades.
+- Should that fail to satisfy your craving for futility, an optional button flings the
+  hash at a Base Sepolia contract which promptly forgets it in an event log.
 
 ## Development
 

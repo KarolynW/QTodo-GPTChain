@@ -16,6 +16,10 @@ This is the todo list app absolutely no one needs, yet here we are.
 - **OpenTimestamps proofs** – expired tasks can be hashed in-browser and timestamped
   without ever leaking their contents. Proofs are created, verified and upgraded via a
   tiny FastAPI server.
+- **Pointless EVM anchoring** – for reasons best left unexplored, hashes can also be
+  flung at a bargain-bin L2 chain where a microscopic smart contract dutifully emits
+  an event. The app only hands over the SHA-256 hex and a brief reference, then shows
+  you a block explorer link so you can admire the waste.
 - **Blinking ASCII art** – because a todo app without terminal nostalgia is hardly
   worth opening.
 - **LocalStorage persistence** – your list survives refreshes and browser restarts so
@@ -39,6 +43,20 @@ cd ots-server
 pip install -r requirements.txt
 uvicorn main:app --reload
 ```
+
+To indulge the EVM anchoring, set the following environment variables so the
+server knows how to reach your chosen testnet:
+
+```
+EVM_RPC_URL=https://sepolia.base.org
+EVM_PRIVATE_KEY=0x...
+EVM_CONTRACT_ADDRESS=0x...
+EVM_CHAIN=base-sepolia
+EVM_EXPLORER=https://sepolia.basescan.org
+```
+
+The contract source lives in `evm/Anchor.sol` and does little more than shout an
+event into the void.
 
 ## Development
 
