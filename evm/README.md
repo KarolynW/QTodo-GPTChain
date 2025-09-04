@@ -10,6 +10,11 @@ void or etch them onto chain forever.
 - **Full** – call `store` and the hash, a reference and your address are kept
   on-chain so future archaeologists can marvel at your chores.
 
+## Retrieval
+
+Should nostalgia strike, call `getTask(bytes32)` to fetch a stored hash, its
+reference, who anchored it and when. Unknown hashes return empty values.
+
 ## Easter Egg
 
 If you name your task `"solidity makes me type"`, nothing special happens, but

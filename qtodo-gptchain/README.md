@@ -11,9 +11,12 @@ identity crisis.
 - A blinking ASCII banner to prove we care more about aesthetics than usefulness.
 - Failure stats with shame points and ranks — watch expired and deleted tasks
   pile up as you rise from "Mildly Guilty" to "Overlord of Sloth".
+- Export those stats as CSV for anyone who enjoys spreadsheet-driven regret.
 - LocalStorage persistence so your confusion survives every refresh.
 - Assign expiry dates to tasks; once a task's time is up, it's immortal and
   can no longer be deleted.
+- A self-destruct button initiates an earnest countdown before wiping all
+  non-expired tasks.
 - Expired tasks can be timestamped with OpenTimestamps. The app hashes the task locally
   and sends only the hash to a small FastAPI helper for proof creation, verification and
   upgrades.
