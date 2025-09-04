@@ -18,6 +18,16 @@ identity crisis.
 - Should that fail to satisfy your craving for futility, an optional button flings the
   hash at a Base Sepolia contract which promptly forgets it in an event log.
 
+## Tests
+
+Because we apparently don't trust ourselves, there's a test suite.
+
+```bash
+npm test
+```
+
+If the results aren't a pristine field of green, feel free to blame cosmic rays.
+
 ## Development
 
 ```bash
