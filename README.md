@@ -26,10 +26,10 @@ checkbox and a database table were enough, brace yourself.
 - **OpenTimestamps proofs** – expired tasks can be hashed in-browser and timestamped
   without ever leaking their contents. Proofs are created, verified and upgraded via a
   tiny FastAPI server that exists solely to confuse future archaeologists.
-- **Pointless EVM anchoring** – for reasons best left unexplored, hashes can also be
-  flung at a bargain-bin L2 chain where a microscopic smart contract dutifully emits
-  an event. The app only hands over the SHA-256 hex and a brief reference, then shows
-  you a block explorer link so you can admire the waste.
+- **Pointless EVM anchoring** – for reasons best left unexplored, hashes can be anchored
+  on a bargain-bin L2 chain via a microscopic smart contract. Run it in **lite** mode to
+  emit a throwaway event, or flip to **full** mode to stash the hash and a reference
+  string on-chain and bask in the permanence.
 - **Blinking ASCII art** – because a todo app without terminal nostalgia is hardly
   worth opening. Bring your own CRT monitor for maximum effect.
 - **LocalStorage persistence** – your list survives refreshes and browser restarts so
@@ -86,12 +86,19 @@ EVM_EXPLORER=https://sepolia.basescan.org
 EVM_MODE=lite
 ```
 
-Set `EVM_MODE=full` if you actually want the chain to remember your hashes. In
-`lite` mode (the default) the contract simply emits an event. When switched to
-`full` it persists the hash and a reference string on-chain for all eternity.
+Two modes are available:
 
-The contract source lives in `evm/Anchor.sol` and can operate in either mode,
-letting you choose between fiscal responsibility and glorious waste.
+- `lite` (default) – the contract calls `record`, which emits an event and then
+  forgets the hash to keep gas costs microscopic.
+- `full` – the contract uses `store` to persist the hash, a short reference and
+  the sender address on-chain. This costs more but allows later verification via
+  `POST /evm/verify` or the `getTask` view.
+
+Set `EVM_MODE=full` if you want the chain to remember your hashes; otherwise the
+Lite mode leaves only an ephemeral event behind.
+
+The contract source lives in `evm/Anchor.sol` and supports both modes, letting
+you choose between fiscal responsibility and glorious waste.
 
 ## Tour of the Repository
 
