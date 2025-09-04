@@ -81,7 +81,7 @@ function App() {
             copy[i] = {
               ...copy[i],
               status: 'expired',
-              otsMeta: { ...copy[i].otsMeta, hash },
+              otsMeta: { ...copy[i].otsMeta, hash, ref: hash.slice(0, 8) },
             }
             return copy
           })
@@ -145,6 +145,50 @@ function App() {
       copy[index] = {
         ...copy[index],
         otsMeta: { ...copy[index].otsMeta, proof: data.proof, status: 'upgraded' },
+      }
+      return copy
+    })
+  }
+
+  // Politely ask the chain to remember our hash.
+  const anchorOnChain = async (index) => {
+    const task = tasks[index]
+    if (!task.otsMeta?.hash || !task.otsMeta?.ref) return
+    const res = await fetch('http://localhost:8000/evm/anchor', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hash: task.otsMeta.hash, ref: task.otsMeta.ref }),
+    })
+    const data = await res.json()
+    setTasks((prev) => {
+      const copy = [...prev]
+      copy[index] = {
+        ...copy[index],
+        otsMeta: {
+          ...copy[index].otsMeta,
+          chain: data.chain,
+          contract: data.contract,
+          tx: data.tx,
+          explorer: data.explorer,
+          lastVerification: 'pending',
+        },
+      }
+      return copy
+    })
+    const vRes = await fetch('http://localhost:8000/evm/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hash: task.otsMeta.hash }),
+    })
+    const vData = await vRes.json()
+    setTasks((prev) => {
+      const copy = [...prev]
+      copy[index] = {
+        ...copy[index],
+        otsMeta: {
+          ...copy[index].otsMeta,
+          lastVerification: vData.found ? 'recorded' : 'missing',
+        },
       }
       return copy
     })
@@ -272,6 +316,25 @@ function App() {
                   >
                     Upgrade
                   </button>
+                  <button
+                    onClick={() => anchorOnChain(index)}
+                    className="border px-1"
+                  >
+                    Anchor
+                  </button>
+                  {task.otsMeta?.explorer && (
+                    <a
+                      href={task.otsMeta.explorer}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline"
+                    >
+                      tx
+                    </a>
+                  )}
+                  {task.otsMeta?.lastVerification && (
+                    <span>{task.otsMeta.lastVerification}</span>
+                  )}
                   {task.otsMeta?.status && <span>{task.otsMeta.status}</span>}
                 </div>
               )}
