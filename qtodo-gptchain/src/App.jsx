@@ -1,16 +1,73 @@
+import { useState } from 'react'
+
 function App() {
+  const [taskText, setTaskText] = useState('')
+  const [tasks, setTasks] = useState([])
+
+  const addTask = () => {
+    const text = taskText.trim()
+    if (text) {
+      setTasks([...tasks, { text, completed: false }])
+      setTaskText('')
+    }
+  }
+
+  const toggleTask = (index) => {
+    setTasks(
+      tasks.map((t, i) =>
+        i === index ? { ...t, completed: !t.completed } : t,
+      ),
+    )
+  }
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      addTask()
+    }
+  }
+
   return (
     <div className="text-center">
       <pre className="whitespace-pre leading-none">
-{` ____  _____ ____   ___   ___   ___  ____  _____
+        {String.raw` ____  _____ ____   ___   ___   ___  ____  _____
 |  _ \| ____|  _ \ / _ \ / _ \ / _ \|  _ \| ____|
 | | | |  _| | |_) | | | | | | | | | | | | |  _|
 | |_| | |___|  __/| |_| | |_| | |_| | |_| | |___
 |____/|_____|_|    \___/ \___/ \___/|____/|_____|`}
       </pre>
-      <div className="blink h-6"></div>
+      <div className="blink h-6 mb-6"></div>
+
+      <div className="space-x-2 mb-4">
+        <input
+          value={taskText}
+          onChange={(e) => setTaskText(e.target.value)}
+          onKeyDown={handleKeyDown}
+          className="bg-black border border-green-500 px-2 py-1"
+          placeholder="New task"
+        />
+        <button
+          onClick={addTask}
+          className="border border-green-500 px-2 py-1"
+        >
+          Add
+        </button>
+      </div>
+
+      <ul className="space-y-2">
+        {tasks.map((task, index) => (
+          <li key={index} className="flex items-center justify-center">
+            <input
+              type="checkbox"
+              checked={task.completed}
+              onChange={() => toggleTask(index)}
+              className="mr-2"
+            />
+            <span className={task.completed ? 'line-through' : ''}>{task.text}</span>
+          </li>
+        ))}
+      </ul>
     </div>
-  );
+  )
 }
 
 export default App;
