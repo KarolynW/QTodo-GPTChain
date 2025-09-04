@@ -13,6 +13,9 @@ This is the todo list app absolutely no one needs, yet here we are.
   ambiguously poetic haiku. Understanding the checklist is half the battle.
 - **Task expiration** – give a task a deadline; once it passes, the task becomes
   undeletable, a haunting reminder of your unfinished ambitions.
+- **OpenTimestamps proofs** – expired tasks can be hashed in-browser and timestamped
+  without ever leaking their contents. Proofs are created, verified and upgraded via a
+  tiny FastAPI server.
 - **Blinking ASCII art** – because a todo app without terminal nostalgia is hardly
   worth opening.
 - **LocalStorage persistence** – your list survives refreshes and browser restarts so
@@ -27,6 +30,14 @@ The app now ships with Vitest and React Testing Library.
 ```bash
 cd qtodo-gptchain
 npm test
+```
+
+### OpenTimestamps Server
+
+```bash
+cd ots-server
+pip install -r requirements.txt
+uvicorn main:app --reload
 ```
 
 ## Development

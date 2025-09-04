@@ -13,7 +13,19 @@ afterEach(() => {
 
 describe('App', () => {
   it('loads tasks from localStorage', () => {
-    const tasks = [{ text: 'existing', completed: false, expires: Date.now() + 1000 }]
+    const tasks = [
+      {
+        title: 'existing',
+        note: '',
+        created_at: Date.now(),
+        expired_at: Date.now() + 1000,
+        completed: false,
+        status: 'active',
+        user_id: 1,
+        version: 1,
+        otsMeta: {},
+      },
+    ]
     localStorage.setItem('tasks', JSON.stringify(tasks))
     render(<App />)
     expect(screen.getByText('existing')).toBeInTheDocument()
@@ -42,7 +54,19 @@ describe('App', () => {
   })
 
   it('toggles task completion', () => {
-    const tasks = [{ text: 'finish report', completed: false, expires: Date.now() + 1000 }]
+    const tasks = [
+      {
+        title: 'finish report',
+        note: '',
+        created_at: Date.now(),
+        expired_at: Date.now() + 1000,
+        completed: false,
+        status: 'active',
+        user_id: 1,
+        version: 1,
+        otsMeta: {},
+      },
+    ]
     localStorage.setItem('tasks', JSON.stringify(tasks))
     render(<App />)
     const checkbox = screen.getByRole('checkbox')
@@ -55,8 +79,28 @@ describe('App', () => {
       json: () => Promise.resolve({ data: [0, 1] }),
     })
     const tasks = [
-      { text: 'old', completed: false, expires: Date.now() - 1000 },
-      { text: 'new', completed: false, expires: Date.now() + 1000 },
+      {
+        title: 'old',
+        note: '',
+        created_at: Date.now() - 2000,
+        expired_at: Date.now() - 1000,
+        completed: false,
+        status: 'expired',
+        user_id: 1,
+        version: 1,
+        otsMeta: { hash: 'deadbeef' },
+      },
+      {
+        title: 'new',
+        note: '',
+        created_at: Date.now(),
+        expired_at: Date.now() + 1000,
+        completed: false,
+        status: 'active',
+        user_id: 1,
+        version: 1,
+        otsMeta: {},
+      },
     ]
     localStorage.setItem('tasks', JSON.stringify(tasks))
     render(<App />)

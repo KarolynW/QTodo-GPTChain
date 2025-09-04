@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { canonicalizeTask, sha256Hex } from './utils/ots'
 
 const fetchQuantumRandom = async (length) => {
   const res = await fetch(
@@ -69,12 +70,105 @@ function App() {
     }
   }, [tasks])
 
+  useEffect(() => {
+    const now = Date.now()
+    tasks.forEach((t, i) => {
+      if (t.status !== 'expired' && t.expired_at && now > t.expired_at) {
+        const canonical = canonicalizeTask(t)
+        sha256Hex(canonical).then((hash) => {
+          setTasks((prev) => {
+            const copy = [...prev]
+            copy[i] = {
+              ...copy[i],
+              status: 'expired',
+              otsMeta: { ...copy[i].otsMeta, hash },
+            }
+            return copy
+          })
+        })
+      }
+    })
+  }, [tasks])
+
+  const createProof = async (index) => {
+    const task = tasks[index]
+    if (!task.otsMeta?.hash) return
+    const res = await fetch('http://localhost:8000/ots/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hash: task.otsMeta.hash }),
+    })
+    const data = await res.json()
+    setTasks((prev) => {
+      const copy = [...prev]
+      copy[index] = {
+        ...copy[index],
+        otsMeta: { ...copy[index].otsMeta, proof: data.proof, status: 'created' },
+      }
+      return copy
+    })
+  }
+
+  const verifyProof = async (index) => {
+    const task = tasks[index]
+    if (!task.otsMeta?.proof) return
+    const res = await fetch('http://localhost:8000/ots/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hash: task.otsMeta.hash, proof: task.otsMeta.proof }),
+    })
+    const data = await res.json()
+    setTasks((prev) => {
+      const copy = [...prev]
+      copy[index] = {
+        ...copy[index],
+        otsMeta: {
+          ...copy[index].otsMeta,
+          status: data.verified ? 'verified' : 'invalid',
+        },
+      }
+      return copy
+    })
+  }
+
+  const upgradeProof = async (index) => {
+    const task = tasks[index]
+    if (!task.otsMeta?.proof) return
+    const res = await fetch('http://localhost:8000/ots/upgrade', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ proof: task.otsMeta.proof }),
+    })
+    const data = await res.json()
+    setTasks((prev) => {
+      const copy = [...prev]
+      copy[index] = {
+        ...copy[index],
+        otsMeta: { ...copy[index].otsMeta, proof: data.proof, status: 'upgraded' },
+      }
+      return copy
+    })
+  }
+
   const addTask = async () => {
     const text = taskText.trim()
     const expires = Date.parse(expiryDate)
     if (text && expiryDate) {
       const haiku = await generateHaiku(text)
-      setTasks([...tasks, { text: haiku, completed: false, expires }])
+      setTasks([
+        ...tasks,
+        {
+          title: haiku,
+          note: '',
+          created_at: Date.now(),
+          expired_at: expires,
+          completed: false,
+          status: 'active',
+          user_id: 1,
+          version: 1,
+          otsMeta: {},
+        },
+      ])
       setTaskText('')
       setExpiryDate('')
     }
@@ -90,7 +184,7 @@ function App() {
 
   const deleteTask = (index) => {
     const task = tasks[index]
-    if (task.expires && Date.now() > task.expires) {
+    if (task.expired_at && Date.now() > task.expired_at) {
       return
     }
     setTasks(tasks.filter((_, i) => i !== index))
@@ -137,24 +231,53 @@ function App() {
       </div>
 
       <ul className="space-y-2">
-        {tasks.map((task, index) => (
-          <li key={index} className="flex items-center justify-center">
-            <input
-              type="checkbox"
-              checked={task.completed}
-              onChange={() => toggleTask(index)}
-              className="mr-2"
-            />
-            <span className={task.completed ? 'line-through' : ''}>{task.text}</span>
-            <button
-              onClick={() => deleteTask(index)}
-              className="border border-red-500 px-1 ml-2"
-              disabled={task.expires && Date.now() > task.expires}
-            >
-              Delete
-            </button>
-          </li>
-        ))}
+        {tasks.map((task, index) => {
+          const isExpired = task.status === 'expired'
+          return (
+            <li key={index} className="flex items-center justify-center">
+              <input
+                type="checkbox"
+                checked={task.completed}
+                onChange={() => toggleTask(index)}
+                className="mr-2"
+              />
+              <span className={task.completed ? 'line-through' : ''}>{task.title}</span>
+              <button
+                onClick={() => deleteTask(index)}
+                className="border border-red-500 px-1 ml-2"
+                disabled={isExpired}
+              >
+                Delete
+              </button>
+              {isExpired && (
+                <div className="flex space-x-1 ml-2 text-xs">
+                  <span className="border px-1">
+                    {task.otsMeta?.hash?.slice(0, 8) || ''}
+                  </span>
+                  <button
+                    onClick={() => createProof(index)}
+                    className="border px-1"
+                  >
+                    Create
+                  </button>
+                  <button
+                    onClick={() => verifyProof(index)}
+                    className="border px-1"
+                  >
+                    Verify
+                  </button>
+                  <button
+                    onClick={() => upgradeProof(index)}
+                    className="border px-1"
+                  >
+                    Upgrade
+                  </button>
+                  {task.otsMeta?.status && <span>{task.otsMeta.status}</span>}
+                </div>
+              )}
+            </li>
+          )
+        })}
       </ul>
     </div>
   )
