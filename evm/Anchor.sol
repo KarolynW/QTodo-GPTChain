@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 
 // A contract that can either lazily emit events or, for those with more
 // ether than restraint, persist hashes directly on-chain.
+// If you're reading this comment, welcome to the secret society of people who
+// scroll past documentation.
 contract Anchor {
     struct Task {
         bytes32 hash;
@@ -18,13 +20,13 @@ contract Anchor {
 
     // Lite mode – emit an event and move on.
     function record(bytes32 hash, string calldata ref) external {
-        emit Recorded(hash, ref, msg.sender);
+        emit Recorded(hash, ref, msg.sender); // Event-based therapy for your tasks.
     }
 
     // Full-fat mode – write the task to storage so it can haunt us forever.
     function store(bytes32 hash, string calldata ref) external {
-        tasks[hash] = Task(hash, ref, msg.sender, block.timestamp);
-        emit Stored(hash, ref, msg.sender);
+        tasks[hash] = Task(hash, ref, msg.sender, block.timestamp); // Now it's permanent.
+        emit Stored(hash, ref, msg.sender); // May the gas fee be ever in your favor.
     }
 
     // Retrieve a stored task. Returns zero values if the hash is unknown.
