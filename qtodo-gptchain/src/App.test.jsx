@@ -34,7 +34,7 @@ describe('App', () => {
   it('adds tasks rendered as haiku', async () => {
     // Provide a bogus API key so generateHaiku thinks it's rich.
     import.meta.env.VITE_OPENAI_API_KEY = 'test'
-    vi.spyOn(global, 'fetch').mockResolvedValue({
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       json: () =>
         Promise.resolve({
           choices: [{ message: { content: 'mystic haiku' } }],
@@ -77,7 +77,7 @@ describe('App', () => {
   })
 
   it('deletes unexpired task and blocks expired', () => {
-    vi.spyOn(global, 'fetch').mockResolvedValue({
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       json: () => Promise.resolve({ data: [0, 1] }),
     })
     const tasks = [
