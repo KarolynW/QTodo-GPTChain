@@ -1,7 +1,8 @@
 # qtodo-gptchain
 
-This project is a minimal Vite + React setup styled with Tailwind CSS.
-It renders an ASCII art title with a blinking terminal-style cursor.
+This project started as a minimal Vite + React setup styled with Tailwind CSS.
+It now includes a simple to-do list where you can add tasks and mark them as completed.
+An ASCII art title with a blinking terminal-style cursor is displayed above the list.
 
 ## Development
 
