@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { canonicalizeTask, sha256Hex } from './utils/ots'
 
+// Because using a normal pseudo-RNG just isn't pretentious enough.
 const fetchQuantumRandom = async (length) => {
   const res = await fetch(
     `https://qrng.anu.edu.au/API/jsonI.php?length=${length}&type=uint8`,
@@ -9,13 +10,16 @@ const fetchQuantumRandom = async (length) => {
   return data.data
 }
 
+// Beg the AI for a haiku; if we can't afford the API key, just echo back the task.
 const generateHaiku = async (task) => {
+  const key = import.meta.env.VITE_OPENAI_API_KEY
+  if (!key) return task
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`,
+        Authorization: `Bearer ${key}`,
       },
       body: JSON.stringify({
         model: 'gpt-4o-mini',

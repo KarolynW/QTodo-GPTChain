@@ -1,3 +1,4 @@
+// Flatten a task into a JSON string so cryptographic hashes can judge us fairly.
 export function canonicalizeTask(task) {
   const obj = {
     title: task.title,
@@ -11,6 +12,7 @@ export function canonicalizeTask(task) {
   return JSON.stringify(obj)
 }
 
+// Compute SHA-256 because apparently "MD5" doesn't scare auditors anymore.
 export async function sha256Hex(str) {
   const encoder = new TextEncoder()
   const data = encoder.encode(str)
