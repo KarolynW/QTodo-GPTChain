@@ -36,6 +36,7 @@ const generateHaiku = async (task) => {
 function App() {
   const [taskText, setTaskText] = useState('')
   const [tasks, setTasks] = useState([])
+  const [expiryDate, setExpiryDate] = useState('')
 
   useEffect(() => {
     const saved = localStorage.getItem('tasks')
@@ -70,10 +71,12 @@ function App() {
 
   const addTask = async () => {
     const text = taskText.trim()
-    if (text) {
+    const expires = Date.parse(expiryDate)
+    if (text && expiryDate) {
       const haiku = await generateHaiku(text)
-      setTasks([...tasks, { text: haiku, completed: false }])
+      setTasks([...tasks, { text: haiku, completed: false, expires }])
       setTaskText('')
+      setExpiryDate('')
     }
   }
 
@@ -83,6 +86,14 @@ function App() {
         i === index ? { ...t, completed: !t.completed } : t,
       ),
     )
+  }
+
+  const deleteTask = (index) => {
+    const task = tasks[index]
+    if (task.expires && Date.now() > task.expires) {
+      return
+    }
+    setTasks(tasks.filter((_, i) => i !== index))
   }
 
   const handleKeyDown = (e) => {
@@ -110,6 +121,12 @@ function App() {
           className="bg-black border border-green-500 px-2 py-1"
           placeholder="New task"
         />
+        <input
+          type="datetime-local"
+          value={expiryDate}
+          onChange={(e) => setExpiryDate(e.target.value)}
+          className="bg-black border border-green-500 px-2 py-1"
+        />
         <button
           onClick={addTask}
           className="border border-green-500 px-2 py-1"
@@ -128,6 +145,13 @@ function App() {
               className="mr-2"
             />
             <span className={task.completed ? 'line-through' : ''}>{task.text}</span>
+            <button
+              onClick={() => deleteTask(index)}
+              className="border border-red-500 px-1 ml-2"
+              disabled={task.expires && Date.now() > task.expires}
+            >
+              Delete
+            </button>
           </li>
         ))}
       </ul>
