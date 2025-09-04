@@ -1,5 +1,12 @@
 import { useState, useEffect } from 'react'
 import { canonicalizeTask, sha256Hex } from './utils/ots'
+import Failure from './Failure'
+import {
+  createDefaultStats,
+  recordEvent,
+  processDateRollover,
+  historyToCsv,
+} from './utils/failure'
 
 // Because using a normal pseudo-RNG just isn't pretentious enough.
 const fetchQuantumRandom = async (length) => {
@@ -54,6 +61,11 @@ function App() {
   const [selfDestructing, setSelfDestructing] = useState(false)
   const [countdown, setCountdown] = useState(null)
   const [finalMessage, setFinalMessage] = useState('')
+  const [stats, setStats] = useState(() => {
+    const saved = localStorage.getItem('failureStats')
+    return saved ? JSON.parse(saved) : createDefaultStats()
+  })
+  const [view, setView] = useState('tasks')
 
   useEffect(() => {
     const saved = localStorage.getItem('tasks')
@@ -65,6 +77,18 @@ function App() {
   useEffect(() => {
     localStorage.setItem('tasks', JSON.stringify(tasks))
   }, [tasks])
+
+  useEffect(() => {
+    setStats((prev) => processDateRollover(prev))
+    const id = setInterval(() => {
+      setStats((prev) => processDateRollover(prev))
+    }, 60_000)
+    return () => clearInterval(id)
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem('failureStats', JSON.stringify(stats))
+  }, [stats])
 
   useEffect(() => {
     const lastShuffle = Number(localStorage.getItem('lastShuffle'))
@@ -102,6 +126,7 @@ function App() {
             }
             return copy
           })
+          setStats((prev) => recordEvent(prev, 'expired'))
         })
       }
     })
@@ -276,11 +301,14 @@ function App() {
   }
 
   const toggleTask = (index) => {
+    const task = tasks[index]
+    const nowCompleted = !task.completed
     setTasks(
-      tasks.map((t, i) =>
-        i === index ? { ...t, completed: !t.completed } : t,
-      ),
+      tasks.map((t, i) => (i === index ? { ...t, completed: nowCompleted } : t)),
     )
+    if (nowCompleted) {
+      setStats((prev) => recordEvent(prev, 'completed'))
+    }
   }
 
   const deleteTask = (index) => {
@@ -288,7 +316,25 @@ function App() {
     if (task.expired_at && Date.now() > task.expired_at) {
       return
     }
+    if (!task.completed && task.status !== 'expired') {
+      setStats((prev) => recordEvent(prev, 'deleted'))
+    }
     setTasks(tasks.filter((_, i) => i !== index))
+  }
+
+  const exportCsv = () => {
+    const csv = historyToCsv(stats.history)
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'failure_stats.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const resetStats = () => {
+    setStats(processDateRollover(createDefaultStats()))
   }
 
   const handleKeyDown = (e) => {
@@ -299,113 +345,128 @@ function App() {
 
   return (
     <div className="text-center">
-      <pre className="whitespace-pre leading-none">
-        {String.raw` ____  _____ ____   ___   ___   ___  ____  _____
+      <div className="flex justify-end space-x-2 p-2">
+        <button onClick={() => setView('tasks')} className="border px-2 py-1">
+          Tasks
+        </button>
+        <button onClick={() => setView('failure')} className="border px-2 py-1">
+          Failure
+        </button>
+        <span className="border px-2 py-1">Shame {stats.shame_points}</span>
+      </div>
+      {view === 'failure' ? (
+        <Failure stats={stats} resetStats={resetStats} exportCsv={exportCsv} />
+      ) : (
+        <>
+          <pre className="whitespace-pre leading-none">
+            {String.raw` ____  _____ ____   ___   ___   ___  ____  _____
 |  _ \| ____|  _ \ / _ \ / _ \ / _ \|  _ \| ____|
 | | | |  _| | |_) | | | | | | | | | | | | |  _|
 | |_| | |___|  __/| |_| | |_| | |_| | |_| | |___
 |____/|_____|_|    \___/ \___/ \___/|____/|_____|`}
-      </pre>
-      <div className="blink h-6 mb-6"></div>
+          </pre>
+          <div className="blink h-6 mb-6"></div>
 
-      <div className="space-x-2 mb-4">
-        <input
-          value={taskText}
-          onChange={(e) => setTaskText(e.target.value)}
-          onKeyDown={handleKeyDown}
-          className="bg-black border border-green-500 px-2 py-1"
-          placeholder="New task"
-        />
-        <input
-          type="datetime-local"
-          aria-label="expiry"
-          value={expiryDate}
-          onChange={(e) => setExpiryDate(e.target.value)}
-          className="bg-black border border-green-500 px-2 py-1"
-        />
-        <button
-          onClick={addTask}
-          className="border border-green-500 px-2 py-1"
-        >
-          Add
-        </button>
-        <button
-          onClick={selfDestruct}
-          className="border border-red-500 px-2 py-1"
-        >
-          Self Destruct
-        </button>
-      </div>
+          <div className="space-x-2 mb-4">
+            <input
+              value={taskText}
+              onChange={(e) => setTaskText(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="bg-black border border-green-500 px-2 py-1"
+              placeholder="New task"
+            />
+            <input
+              type="datetime-local"
+              aria-label="expiry"
+              value={expiryDate}
+              onChange={(e) => setExpiryDate(e.target.value)}
+              className="bg-black border border-green-500 px-2 py-1"
+            />
+            <button
+              onClick={addTask}
+              className="border border-green-500 px-2 py-1"
+            >
+              Add
+            </button>
+            <button
+              onClick={selfDestruct}
+              className="border border-red-500 px-2 py-1"
+            >
+              Self Destruct
+            </button>
+          </div>
 
-      <ul className="space-y-2">
-        {tasks.map((task, index) => {
-          const isExpired = task.status === 'expired'
-          return (
-            <li key={index} className="flex items-center justify-center">
-              <input
-                type="checkbox"
-                checked={task.completed}
-                onChange={() => toggleTask(index)}
-                className="mr-2"
-              />
-              <span className={task.completed ? 'line-through' : ''}>{task.title}</span>
-              <button
-                onClick={() => deleteTask(index)}
-                className="border border-red-500 px-1 ml-2"
-                disabled={isExpired}
-              >
-                Delete
-              </button>
-              {isExpired && (
-                <div className="flex space-x-1 ml-2 text-xs">
-                  <span className="border px-1">
-                    {task.otsMeta?.hash?.slice(0, 8) || ''}
-                  </span>
+          <ul className="space-y-2">
+            {tasks.map((task, index) => {
+              const isExpired = task.status === 'expired'
+              return (
+                <li key={index} className="flex items-center justify-center">
+                  <input
+                    type="checkbox"
+                    checked={task.completed}
+                    onChange={() => toggleTask(index)}
+                    className="mr-2"
+                  />
+                  <span className={task.completed ? 'line-through' : ''}>{task.title}</span>
                   <button
-                    onClick={() => createProof(index)}
-                    className="border px-1"
+                    onClick={() => deleteTask(index)}
+                    className="border border-red-500 px-1 ml-2"
+                    disabled={isExpired}
                   >
-                    Create
+                    Delete
                   </button>
-                  <button
-                    onClick={() => verifyProof(index)}
-                    className="border px-1"
-                  >
-                    Verify
-                  </button>
-                  <button
-                    onClick={() => upgradeProof(index)}
-                    className="border px-1"
-                  >
-                    Upgrade
-                  </button>
-                  <button
-                    onClick={() => anchorOnChain(index)}
-                    className="border px-1"
-                  >
-                    Anchor
-                  </button>
-                  {task.otsMeta?.explorer && (
-                    <a
-                      href={task.otsMeta.explorer}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="underline"
-                    >
-                      tx
-                    </a>
+                  {isExpired && (
+                    <div className="flex space-x-1 ml-2 text-xs">
+                      <span className="border px-1">
+                        {task.otsMeta?.hash?.slice(0, 8) || ''}
+                      </span>
+                      <button
+                        onClick={() => createProof(index)}
+                        className="border px-1"
+                      >
+                        Create
+                      </button>
+                      <button
+                        onClick={() => verifyProof(index)}
+                        className="border px-1"
+                      >
+                        Verify
+                      </button>
+                      <button
+                        onClick={() => upgradeProof(index)}
+                        className="border px-1"
+                      >
+                        Upgrade
+                      </button>
+                      <button
+                        onClick={() => anchorOnChain(index)}
+                        className="border px-1"
+                      >
+                        Anchor
+                      </button>
+                      {task.otsMeta?.explorer && (
+                        <a
+                          href={task.otsMeta.explorer}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline"
+                        >
+                          tx
+                        </a>
+                      )}
+                      {task.otsMeta?.lastVerification && (
+                        <span>{task.otsMeta.lastVerification}</span>
+                      )}
+                      {task.otsMeta?.status && <span>{task.otsMeta.status}</span>}
+                    </div>
                   )}
-                  {task.otsMeta?.lastVerification && (
-                    <span>{task.otsMeta.lastVerification}</span>
-                  )}
-                  {task.otsMeta?.status && <span>{task.otsMeta.status}</span>}
-                </div>
-              )}
-            </li>
-          )
-        })}
-      </ul>
-      {selfDestructing && (
+                </li>
+              )
+            })}
+          </ul>
+        </>
+      )}
+      {selfDestructing && view === 'tasks' && (
         <div className="fixed inset-0 flex flex-col items-center justify-center bg-black bg-opacity-90 z-50 text-green-500">
           <pre className="mb-4">{String.raw`  ___  _   _ ___ ___ _   _  __  __ _
  / __|/ \ | | _ \_ _| | | |/ / / _| | |
