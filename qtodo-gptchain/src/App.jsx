@@ -1,8 +1,47 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+
+const fetchQuantumRandom = async (length) => {
+  const res = await fetch(
+    `https://qrng.anu.edu.au/API/jsonI.php?length=${length}&type=uint8`,
+  )
+  const data = await res.json()
+  return data.data
+}
 
 function App() {
   const [taskText, setTaskText] = useState('')
   const [tasks, setTasks] = useState([])
+
+  useEffect(() => {
+    const saved = localStorage.getItem('tasks')
+    if (saved) {
+      setTasks(JSON.parse(saved))
+    }
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem('tasks', JSON.stringify(tasks))
+  }, [tasks])
+
+  useEffect(() => {
+    const lastShuffle = Number(localStorage.getItem('lastShuffle'))
+    const now = Date.now()
+    if (
+      tasks.length > 1 &&
+      (Number.isNaN(lastShuffle) || now - lastShuffle > 86_400_000)
+    ) {
+      fetchQuantumRandom(tasks.length)
+        .then((numbers) => {
+          const shuffled = numbers
+            .map((n, i) => ({ n, task: tasks[i] }))
+            .sort((a, b) => a.n - b.n)
+            .map(({ task }) => task)
+          setTasks(shuffled)
+          localStorage.setItem('lastShuffle', String(now))
+        })
+        .catch((err) => console.error('Quantum fetch failed', err))
+    }
+  }, [tasks])
 
   const addTask = () => {
     const text = taskText.trim()
