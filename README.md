@@ -30,11 +30,16 @@ This is the todo list app absolutely no one needs, yet here we are.
 ### Testing
 
 The app now ships with Vitest and React Testing Library.
+Because nothing says "rock-solid engineering" like watching tiny green checkmarks
+tell you that hashing strings still works in 2025.
 
 ```bash
 cd qtodo-gptchain
 npm test
 ```
+
+If those tests pass, feel free to frame the output and mail it to your future self
+as proof you once had things under control.
 
 ### OpenTimestamps Server
 

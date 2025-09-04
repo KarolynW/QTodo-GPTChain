@@ -3,18 +3,24 @@ import { canonicalizeTask, sha256Hex } from './utils/ots'
 
 // Because using a normal pseudo-RNG just isn't pretentious enough.
 const fetchQuantumRandom = async (length) => {
+  // Make a totally reasonable network request to a quantum number generator
+  // because using Math.random() would obviously destroy the fabric of reality.
   const res = await fetch(
     `https://qrng.anu.edu.au/API/jsonI.php?length=${length}&type=uint8`,
   )
+  // Parse the response, pretending we're not terrified of what the universe chose.
   const data = await res.json()
+  // Return the array of numbers that will determine our fate for the day.
   return data.data
 }
 
 // Beg the AI for a haiku; if we can't afford the API key, just echo back the task.
 const generateHaiku = async (task) => {
+  // Grab the OpenAI key from the environment, or give up immediately if we live in poverty.
   const key = import.meta.env.VITE_OPENAI_API_KEY
   if (!key) return task
   try {
+    // Politely ask a hyper-advanced language model to turn our grocery list into poetry.
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -29,10 +35,13 @@ const generateHaiku = async (task) => {
         ],
       }),
     })
+    // Read whatever cryptic message the model deigned to return.
     const data = await res.json()
     const content = data?.choices?.[0]?.message?.content
+    // If the model produced nothing, fall back to the boring original text.
     return content?.trim() || task
   } catch (err) {
+    // When the request fails, we document it with a console.error to keep log parsers busy.
     console.error('OpenAI request failed', err)
     return task
   }
