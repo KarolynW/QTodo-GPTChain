@@ -12,6 +12,9 @@ logger = logging.getLogger(__name__)
 app = FastAPI()
 client = Client()
 
+# This server exists mainly so hashes can feel important before fading into
+# obscurity. Think of it as a timestamping spa.
+
 # EVM client setup. All variables are optional so the server still works
 # without a chain connection.
 RPC_URL = os.getenv('EVM_RPC_URL')

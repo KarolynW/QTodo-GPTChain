@@ -93,6 +93,21 @@ Set `EVM_MODE=full` if you actually want the chain to remember your hashes. In
 The contract source lives in `evm/Anchor.sol` and can operate in either mode,
 letting you choose between fiscal responsibility and glorious waste.
 
+## Tour of the Repository
+
+- **qtodo-gptchain/** – the front end where tasks become poetry and checkboxes learn
+  shame.
+- **ots-server/** – a FastAPI helper that lovingly wraps OpenTimestamps and pretends
+  to be a blockchain whisperer.
+- **evm/** – contains a Solidity contract that exists solely so your chores can
+  hit the chain and feel important for a few seconds.
+
+If you stumbled all the way down here, the secret passphrase is
+`"nothing says productivity like twelve microservices"`.
+
+<!-- Easter egg: you have unlocked the hidden level. Sadly, it only contains more
+     documentation. -->
+
 ## Development
 
 ```bash

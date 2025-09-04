@@ -47,3 +47,14 @@ uvicorn main:app --reload
 
 Set `VITE_OPENAI_API_KEY` in your environment if you actually want the AI to
 rewrite your tasks. Otherwise, enjoy plain text like it's 1999.
+
+## Hidden Features
+
+- Press `Ctrl+Alt+Shift+Y` to enable "yodel mode".*
+- Triple-click the ASCII art for a motivational quote so cryptic it may be a
+  bug.
+
+\*Not actually implemented, but believing is half the battle.
+
+<!-- If you're digging for secrets, try adding a task named "42". Nothing happens,
+     but you'll feel clever. -->
