@@ -20,8 +20,10 @@ identity crisis.
 - Expired tasks can be timestamped with OpenTimestamps. The app hashes the task locally
   and sends only the hash to a small FastAPI helper for proof creation, verification and
   upgrades.
-- Should that fail to satisfy your craving for futility, an optional button flings the
-  hash at a Base Sepolia contract which promptly forgets it in an event log.
+- Should that fail to satisfy your craving for futility, an optional button can anchor
+  the hash on a Base Sepolia contract. In the default **lite** mode the contract merely
+  emits an event and forgets the hash; switch the server to `EVM_MODE=full` and it stores
+  the hash and a reference on-chain for anyone to dig up later.
 
 ## Tests
 
