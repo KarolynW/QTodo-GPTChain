@@ -135,105 +135,126 @@ function App() {
   const createProof = async (index) => {
     const task = tasks[index]
     if (!task.otsMeta?.hash) return
-    const res = await fetch('http://localhost:8000/ots/create', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ hash: task.otsMeta.hash }),
-    })
-    const data = await res.json()
-    setTasks((prev) => {
-      const copy = [...prev]
-      copy[index] = {
-        ...copy[index],
-        otsMeta: { ...copy[index].otsMeta, proof: data.proof, status: 'created' },
-      }
-      return copy
-    })
+    try {
+      const res = await fetch('http://localhost:8000/ots/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hash: task.otsMeta.hash }),
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      setTasks((prev) => {
+        const copy = [...prev]
+        copy[index] = {
+          ...copy[index],
+          otsMeta: { ...copy[index].otsMeta, proof: data.proof, status: 'created' },
+        }
+        return copy
+      })
+    } catch (err) {
+      console.error('createProof failed', err)
+    }
   }
 
   const verifyProof = async (index) => {
     const task = tasks[index]
     if (!task.otsMeta?.proof) return
-    const res = await fetch('http://localhost:8000/ots/verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ hash: task.otsMeta.hash, proof: task.otsMeta.proof }),
-    })
-    const data = await res.json()
-    setTasks((prev) => {
-      const copy = [...prev]
-      copy[index] = {
-        ...copy[index],
-        otsMeta: {
-          ...copy[index].otsMeta,
-          status: data.verified ? 'verified' : 'invalid',
-        },
-      }
-      return copy
-    })
+    try {
+      const res = await fetch('http://localhost:8000/ots/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hash: task.otsMeta.hash, proof: task.otsMeta.proof }),
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      setTasks((prev) => {
+        const copy = [...prev]
+        copy[index] = {
+          ...copy[index],
+          otsMeta: {
+            ...copy[index].otsMeta,
+            status: data.verified ? 'verified' : 'invalid',
+          },
+        }
+        return copy
+      })
+    } catch (err) {
+      console.error('verifyProof failed', err)
+    }
   }
 
   const upgradeProof = async (index) => {
     const task = tasks[index]
     if (!task.otsMeta?.proof) return
-    const res = await fetch('http://localhost:8000/ots/upgrade', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ proof: task.otsMeta.proof }),
-    })
-    const data = await res.json()
-    setTasks((prev) => {
-      const copy = [...prev]
-      copy[index] = {
-        ...copy[index],
-        otsMeta: { ...copy[index].otsMeta, proof: data.proof, status: 'upgraded' },
-      }
-      return copy
-    })
+    try {
+      const res = await fetch('http://localhost:8000/ots/upgrade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ proof: task.otsMeta.proof }),
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      setTasks((prev) => {
+        const copy = [...prev]
+        copy[index] = {
+          ...copy[index],
+          otsMeta: { ...copy[index].otsMeta, proof: data.proof, status: 'upgraded' },
+        }
+        return copy
+      })
+    } catch (err) {
+      console.error('upgradeProof failed', err)
+    }
   }
 
   // Politely ask the chain to remember our hash.
   const anchorOnChain = async (index) => {
     const task = tasks[index]
     if (!task.otsMeta?.hash || !task.otsMeta?.ref) return
-    const res = await fetch('http://localhost:8000/evm/anchor', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ hash: task.otsMeta.hash, ref: task.otsMeta.ref }),
-    })
-    const data = await res.json()
-    setTasks((prev) => {
-      const copy = [...prev]
-      copy[index] = {
-        ...copy[index],
-        otsMeta: {
-          ...copy[index].otsMeta,
-          chain: data.chain,
-          contract: data.contract,
-          tx: data.tx,
-          explorer: data.explorer,
-          lastVerification: 'pending',
-        },
-      }
-      return copy
-    })
-    const vRes = await fetch('http://localhost:8000/evm/verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ hash: task.otsMeta.hash }),
-    })
-    const vData = await vRes.json()
-    setTasks((prev) => {
-      const copy = [...prev]
-      copy[index] = {
-        ...copy[index],
-        otsMeta: {
-          ...copy[index].otsMeta,
-          lastVerification: vData.found ? 'recorded' : 'missing',
-        },
-      }
-      return copy
-    })
+    try {
+      const res = await fetch('http://localhost:8000/evm/anchor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hash: task.otsMeta.hash, ref: task.otsMeta.ref }),
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      setTasks((prev) => {
+        const copy = [...prev]
+        copy[index] = {
+          ...copy[index],
+          otsMeta: {
+            ...copy[index].otsMeta,
+            chain: data.chain,
+            contract: data.contract,
+            tx: data.tx,
+            explorer: data.explorer,
+            lastVerification: 'pending',
+          },
+        }
+        return copy
+      })
+      const vRes = await fetch('http://localhost:8000/evm/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hash: task.otsMeta.hash }),
+      })
+      if (!vRes.ok) throw new Error(`HTTP ${vRes.status}`)
+      const vData = await vRes.json()
+      setTasks((prev) => {
+        const copy = [...prev]
+        copy[index] = {
+          ...copy[index],
+          otsMeta: {
+            ...copy[index].otsMeta,
+            lastVerification: vData.found ? 'recorded' : 'missing',
+          },
+        }
+        return copy
+      })
+    } catch (err) {
+      console.error('anchorOnChain failed', err)
+    }
   }
 
   const selfDestruct = async () => {

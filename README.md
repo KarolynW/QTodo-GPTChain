@@ -83,10 +83,15 @@ EVM_PRIVATE_KEY=0x...
 EVM_CONTRACT_ADDRESS=0x...
 EVM_CHAIN=base-sepolia
 EVM_EXPLORER=https://sepolia.basescan.org
+EVM_MODE=lite
 ```
 
-The contract source lives in `evm/Anchor.sol` and does little more than shout an
-event into the void.
+Set `EVM_MODE=full` if you actually want the chain to remember your hashes. In
+`lite` mode (the default) the contract simply emits an event. When switched to
+`full` it persists the hash and a reference string on-chain for all eternity.
+
+The contract source lives in `evm/Anchor.sol` and can operate in either mode,
+letting you choose between fiscal responsibility and glorious waste.
 
 ## Development
 
