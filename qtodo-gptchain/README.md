@@ -9,6 +9,8 @@ identity crisis.
 - Tasks are lovingly transmogrified into enigmatic haiku by the OpenAI API.
 - Daily quantum random shuffling keeps you guessing which chore comes next.
 - A blinking ASCII banner to prove we care more about aesthetics than usefulness.
+- Failure stats with shame points and ranks — watch expired and deleted tasks
+  pile up as you rise from "Mildly Guilty" to "Overlord of Sloth".
 - LocalStorage persistence so your confusion survives every refresh.
 - Assign expiry dates to tasks; once a task's time is up, it's immortal and
   can no longer be deleted.

@@ -20,6 +20,9 @@ checkbox and a database table were enough, brace yourself.
   like an embarrassing tweet.
 - **Self-destruct mode** – press the big red button and the entire list immolates
   itself, perfect for those moments when your best plan is scorched earth productivity.
+- **Failure stats and shame points** – track expired and deleted tasks,
+  watch your procrastination streak grow, and climb from "Mildly Guilty"
+  all the way to "Overlord of Sloth".
 - **OpenTimestamps proofs** – expired tasks can be hashed in-browser and timestamped
   without ever leaking their contents. Proofs are created, verified and upgraded via a
   tiny FastAPI server that exists solely to confuse future archaeologists.
