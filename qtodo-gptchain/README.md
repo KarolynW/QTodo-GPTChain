@@ -12,12 +12,23 @@ identity crisis.
 - LocalStorage persistence so your confusion survives every refresh.
 - Assign expiry dates to tasks; once a task's time is up, it's immortal and
   can no longer be deleted.
+- Expired tasks can be timestamped with OpenTimestamps. The app hashes the task locally
+  and sends only the hash to a small FastAPI helper for proof creation, verification and
+  upgrades.
 
 ## Development
 
 ```bash
 npm install
 npm run dev
+```
+
+To use OpenTimestamps, run the server from the repository root:
+
+```bash
+cd ../ots-server
+pip install -r requirements.txt
+uvicorn main:app --reload
 ```
 
 Set `VITE_OPENAI_API_KEY` in your environment if you actually want the AI to
