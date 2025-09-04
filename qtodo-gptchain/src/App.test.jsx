@@ -113,4 +113,38 @@ describe('App', () => {
     fireEvent.click(deleteFresh)
     expect(screen.queryByText('new')).not.toBeInTheDocument()
   })
+
+  it('self destruct spares expired tasks', async () => {
+    const tasks = [
+      {
+        title: 'old',
+        note: '',
+        created_at: Date.now() - 2000,
+        expired_at: Date.now() - 1000,
+        completed: false,
+        status: 'expired',
+        user_id: 1,
+        version: 1,
+        otsMeta: { hash: 'deadbeef' },
+      },
+      {
+        title: 'new',
+        note: '',
+        created_at: Date.now(),
+        expired_at: Date.now() + 1000,
+        completed: false,
+        status: 'active',
+        user_id: 1,
+        version: 1,
+        otsMeta: {},
+      },
+    ]
+    localStorage.setItem('tasks', JSON.stringify(tasks))
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /self destruct/i }))
+    await screen.findByText(/anticlimax achieved/i, {}, { timeout: 15000 })
+    expect(screen.queryByText('new')).not.toBeInTheDocument()
+    expect(screen.getByText('old')).toBeInTheDocument()
+    expect(JSON.parse(localStorage.getItem('tasks')).length).toBe(1)
+  }, 20000)
 })

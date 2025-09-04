@@ -42,6 +42,9 @@ function App() {
   const [taskText, setTaskText] = useState('')
   const [tasks, setTasks] = useState([])
   const [expiryDate, setExpiryDate] = useState('')
+  const [selfDestructing, setSelfDestructing] = useState(false)
+  const [countdown, setCountdown] = useState(null)
+  const [finalMessage, setFinalMessage] = useState('')
 
   useEffect(() => {
     const saved = localStorage.getItem('tasks')
@@ -82,6 +85,7 @@ function App() {
         sha256Hex(canonical).then((hash) => {
           setTasks((prev) => {
             const copy = [...prev]
+            if (!copy[i]) return copy
             copy[i] = {
               ...copy[i],
               status: 'expired',
@@ -198,6 +202,46 @@ function App() {
     })
   }
 
+  const selfDestruct = async () => {
+    setSelfDestructing(true)
+    setFinalMessage('')
+    for (let i = 7; i >= 0; i--) {
+      setCountdown(i)
+      // one second per tick to build suspense
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise((r) => setTimeout(r, 1000))
+    }
+    const ids = tasks
+      .filter((t) => t.status !== 'expired')
+      .map((t) => t.created_at)
+    for (const id of ids) {
+      let more = true
+      while (more) {
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise((r) => setTimeout(r, 200))
+        setTasks((prev) => {
+          const updated = []
+          more = false
+          for (const t of prev) {
+            if (t.created_at === id) {
+              const newTitle = t.title.slice(0, -1)
+              const newNote = t.note.slice(0, -1)
+              if (newTitle.length > 0 || newNote.length > 0) {
+                updated.push({ ...t, title: newTitle, note: newNote })
+                more = true
+              }
+            } else {
+              updated.push(t)
+            }
+          }
+          return updated
+        })
+      }
+    }
+    setCountdown(null)
+    setFinalMessage('anticlimax achieved. Nothing exploded.')
+  }
+
   const addTask = async () => {
     const text = taskText.trim()
     const expires = Date.parse(expiryDate)
@@ -276,6 +320,12 @@ function App() {
         >
           Add
         </button>
+        <button
+          onClick={selfDestruct}
+          className="border border-red-500 px-2 py-1"
+        >
+          Self Destruct
+        </button>
       </div>
 
       <ul className="space-y-2">
@@ -346,6 +396,17 @@ function App() {
           )
         })}
       </ul>
+      {selfDestructing && (
+        <div className="fixed inset-0 flex flex-col items-center justify-center bg-black bg-opacity-90 z-50 text-green-500">
+          <pre className="mb-4">{String.raw`  ___  _   _ ___ ___ _   _  __  __ _
+ / __|/ \ | | _ \_ _| | | |/ / / _| | |
+| (_ | () | |  _/| || |_| |\ \|  _| |_| |
+ \___|\__/|_|_| |___|\___/|_|\_\_|  \___/
+             arming...`}</pre>
+          {countdown !== null && <div className="text-4xl mb-4">{countdown}</div>}
+          {finalMessage && <div>{finalMessage}</div>}
+        </div>
+      )}
     </div>
   )
 }
