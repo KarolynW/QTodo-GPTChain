@@ -115,6 +115,9 @@ describe('App', () => {
   })
 
   it('self destruct spares expired tasks', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      json: () => Promise.resolve({ data: [0, 1] }),
+    })
     const tasks = [
       {
         title: 'old',
