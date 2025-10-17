@@ -55,12 +55,14 @@ const generateHaiku = async (task) => {
 }
 
 function App() {
+  // Declare an irresponsible number of state variables, each more dramatic than the last.
   const [taskText, setTaskText] = useState('')
   const [tasks, setTasks] = useState([])
   const [expiryDate, setExpiryDate] = useState('')
   const [selfDestructing, setSelfDestructing] = useState(false)
   const [countdown, setCountdown] = useState(null)
   const [finalMessage, setFinalMessage] = useState('')
+  // Track the statistics of failure so we can quantify our despair.
   const [stats, setStats] = useState(() => {
     const saved = localStorage.getItem('failureStats')
     return saved ? JSON.parse(saved) : createDefaultStats()
@@ -68,6 +70,7 @@ function App() {
   const [view, setView] = useState('tasks')
 
   useEffect(() => {
+    // Retrieve stored tasks to remind the user of promises they already broke.
     const saved = localStorage.getItem('tasks')
     if (saved) {
       setTasks(JSON.parse(saved))
@@ -75,10 +78,12 @@ function App() {
   }, [])
 
   useEffect(() => {
+    // Persist every new mistake to disk, because memory is forever.
     localStorage.setItem('tasks', JSON.stringify(tasks))
   }, [tasks])
 
   useEffect(() => {
+    // Each minute we check if the calendar flipped, because failure resets daily.
     setStats((prev) => processDateRollover(prev))
     const id = setInterval(() => {
       setStats((prev) => processDateRollover(prev))
@@ -87,10 +92,12 @@ function App() {
   }, [])
 
   useEffect(() => {
+    // Keep a serialized history of humiliation in localStorage.
     localStorage.setItem('failureStats', JSON.stringify(stats))
   }, [stats])
 
   useEffect(() => {
+    // Shuffle the task list once per day with quantum randomness, because why not.
     const lastShuffle = Number(localStorage.getItem('lastShuffle'))
     const now = Date.now()
     if (
@@ -111,6 +118,7 @@ function App() {
   }, [tasks])
 
   useEffect(() => {
+    // Check for expired tasks so we can brand them with cryptographic shame.
     const now = Date.now()
     tasks.forEach((t, i) => {
       if (t.status !== 'expired' && t.expired_at && now > t.expired_at) {
@@ -133,6 +141,7 @@ function App() {
   }, [tasks])
 
   const createProof = async (index) => {
+    // Request a Merkle proof to prove we procrastinated on-chain.
     const task = tasks[index]
     if (!task.otsMeta?.hash) return
     try {
@@ -157,6 +166,7 @@ function App() {
   }
 
   const verifyProof = async (index) => {
+    // Double-check with the server that our laziness is cryptographically verified.
     const task = tasks[index]
     if (!task.otsMeta?.proof) return
     try {
@@ -184,6 +194,7 @@ function App() {
   }
 
   const upgradeProof = async (index) => {
+    // If the proof isn't fancy enough, ask the server for a shinier version.
     const task = tasks[index]
     if (!task.otsMeta?.proof) return
     try {
