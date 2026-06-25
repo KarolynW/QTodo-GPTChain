@@ -47,10 +47,8 @@ const generateHaiku = async (task) => {
         Authorization: `Bearer ${key}`,
       },
       body: JSON.stringify({
-        // gpt-5.4-nano: OpenAI's cheapest model as of 2026 — $0.20/M input tokens.
-        // Because "gpt-4o-mini was too expensive for generating haiku about groceries" is
-        // a sentence that means something in the year of our lord 2026.
-        model: 'gpt-5.4-nano',
+        // gpt-4o-mini: cheap, fast, real. Unlike our ambitions.
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: 'Turn tasks into ambiguous haiku. Three lines. Cryptic but vaguely related.' },
           { role: 'user', content: `Task: ${task}` },
@@ -58,6 +56,10 @@ const generateHaiku = async (task) => {
       }),
     })
     const data = await res.json()
+    if (data.error) {
+      console.error('OpenAI haiku error:', data.error.message)
+      return task
+    }
     const content = data?.choices?.[0]?.message?.content
     return content?.trim() || task
   } catch (err) {
@@ -86,9 +88,7 @@ const fetchVibe = async (tasks) => {
         Authorization: `Bearer ${key}`,
       },
       body: JSON.stringify({
-        // Same model — gpt-5.4-nano — because the vibe assessment deserves the same budget
-        // as the haiku generation: approximately nothing.
-        model: 'gpt-5.4-nano',
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
@@ -103,10 +103,13 @@ const fetchVibe = async (tasks) => {
       }),
     })
     const data = await res.json()
-    return data?.choices?.[0]?.message?.content?.trim() || 'The AI read your tasks and chose silence.'
+    if (data.error) {
+      return `AI says: "${data.error.message}" — fix your API key in ⚙ Settings and try again.`
+    }
+    return data?.choices?.[0]?.message?.content?.trim() || 'The AI responded with a blank stare. Eerily relatable.'
   } catch (err) {
     console.error('Vibe check failed', err)
-    return 'Vibe check request failed. Even the AI gave up on you. That\'s actually impressive.'
+    return `Vibe check failed (${err.message}). Even the AI gave up on you. That's actually impressive.`
   }
 }
 
@@ -121,6 +124,8 @@ function App() {
   const [finalMessage, setFinalMessage] = useState('')
   const [vibe, setVibe] = useState(null)
   const [vibeLoading, setVibeLoading] = useState(false)
+  const [quantumResult, setQuantumResult] = useState(null)
+  const [quantumLoading, setQuantumLoading] = useState(false)
   const [punishmentMode, setPunishmentMode] = useState(false)
   const [listening, setListening] = useState(false)
   const [dragIndex, setDragIndex] = useState(null)
@@ -567,6 +572,41 @@ function App() {
     setVibeLoading(false)
   }
 
+  // ── Quantum shuffle on demand ─────────────────────────────────────────────
+
+  const quantumShuffle = async () => {
+    if (tasks.length < 2) {
+      setQuantumResult({ source: 'N/A', numbers: [], note: 'Add at least 2 tasks to experience true quantum chaos.' })
+      return
+    }
+    setQuantumLoading(true)
+    setQuantumResult(null)
+    let source = 'ANU Quantum RNG (genuine vacuum fluctuations)'
+    let numbers = []
+    try {
+      const res = await fetch(
+        `https://qrng.anu.edu.au/API/jsonI.php?length=${tasks.length}&type=uint8`,
+      )
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      numbers = data.data
+    } catch (err) {
+      source = 'crypto.getRandomValues (ANU was offline — OS entropy instead)'
+      const buf = new Uint8Array(tasks.length)
+      crypto.getRandomValues(buf)
+      numbers = Array.from(buf)
+    }
+    const sliced = numbers.slice(0, tasks.length)
+    const shuffled = sliced
+      .map((n, i) => ({ n, task: tasks[i] }))
+      .sort((a, b) => a.n - b.n)
+      .map(({ task }) => task)
+    setTasks(shuffled)
+    localStorage.setItem('lastShuffle', String(Date.now()))
+    setQuantumResult({ source, numbers: sliced, timestamp: Date.now() })
+    setQuantumLoading(false)
+  }
+
   // ── Notifications permission ──────────────────────────────────────────────
 
   const enableNotifications = async () => {
@@ -643,6 +683,14 @@ function App() {
             {vibeLoading ? 'vibing…' : '✨ Vibe Check™'}
           </button>
           <button
+            onClick={quantumShuffle}
+            disabled={quantumLoading}
+            title="Reshuffle tasks using genuine quantum randomness from ANU. Falls back to OS entropy if the universe is unavailable."
+            className="nav-btn nav-btn-cyan"
+          >
+            {quantumLoading ? 'collapsing…' : '⚛ Quantum'}
+          </button>
+          <button
             onClick={enableNotifications}
             title={notificationsEnabled ? 'Notifications on' : 'Enable 30-min expiry warnings'}
             className={`nav-btn ${notificationsEnabled ? 'nav-btn-green' : ''}`}
@@ -683,6 +731,45 @@ function App() {
             {vibeLoading
               ? <span>▌ scanning task list for signs of life<span className="blink"> </span></span>
               : vibe}
+          </div>
+        </div>
+      )}
+
+      {/* ── Quantum panel ── */}
+      {(quantumResult || quantumLoading) && (
+        <div className="quantum-panel">
+          <div className="quantum-bar">
+            <span>⚛ QUANTUM_SHUFFLE.EXE</span>
+            <button onClick={() => setQuantumResult(null)} className="vibe-close" title="Dismiss">×</button>
+          </div>
+          <div className="quantum-body">
+            {quantumLoading ? (
+              <span>▌ collapsing wave function<span className="blink"> </span></span>
+            ) : (
+              <>
+                <div className="quantum-source">
+                  <span className="quantum-label">source:</span>
+                  <span className="quantum-value">{quantumResult.source}</span>
+                </div>
+                {quantumResult.note ? (
+                  <div className="quantum-note">{quantumResult.note}</div>
+                ) : (
+                  <>
+                    <div className="quantum-source">
+                      <span className="quantum-label">sampled:</span>
+                      <span className="quantum-value">{quantumResult.timestamp ? new Date(quantumResult.timestamp).toLocaleTimeString() : ''}</span>
+                    </div>
+                    <div className="quantum-nums-label">raw uint8 values (0–255):</div>
+                    <div className="quantum-nums">
+                      {quantumResult.numbers.map((n, i) => (
+                        <span key={i} className="quantum-num">{n}</span>
+                      ))}
+                    </div>
+                    <div className="quantum-note">Tasks reordered by ascending sort of the above values. The universe chose your priorities. Deal with it.</div>
+                  </>
+                )}
+              </>
+            )}
           </div>
         </div>
       )}
