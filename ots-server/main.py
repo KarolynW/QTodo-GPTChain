@@ -1,11 +1,13 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 import base64
 import hashlib
 import io
+import json
 import os
+import time
 import logging
 import sqlite3
 
@@ -23,6 +25,8 @@ from web3 import Web3
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+START_TIME = time.time()
 
 app = FastAPI(
     title="QTodo Retro Server",
@@ -380,3 +384,112 @@ def list_todos(user_id: int):
         for r in rows
     ]
     return {'todos': todos}
+
+
+@app.get('/health')
+def health():
+    """Health check endpoint for load balancers that will never exist.
+
+    Kubernetes probes, Consul service discovery, and ECS task health checks
+    will never touch this endpoint. We provide it anyway, because hope is free.
+    """
+    cur = db.cursor()
+    try:
+        cur.execute('SELECT 1')
+        db_status = 'alive'
+    except Exception:
+        db_status = 'alarming'
+
+    return {
+        'status': 'alive (barely)',
+        'uptime_seconds': round(time.time() - START_TIME, 1),
+        'database': f'sqlite — {db_status} — enterprise-grade if you squint',
+        'blockchain': 'optional (EVM_RPC_URL not set)' if not RPC_URL else f'wired to {CHAIN_NAME}',
+        'quantum_rng': 'delegated to frontend (not our problem)',
+        'haiku_quality': 'variable (depends on OpenAI mood)',
+        'password_security': 'sha256 (we know, we know)',
+        'cors': 'allow_origins=["*"] (YOLO mode)',
+        'philosophy': 'if it boots, ship it',
+    }
+
+
+@app.get('/metrics')
+def metrics():
+    """Prometheus-format metrics for dashboards nobody will build.
+
+    Copy this output into a Grafana panel and watch your team nod seriously
+    at a graph of how many people haven't finished their grocery lists.
+    The existential_dread metric is always 9.7. We measured.
+    """
+    cur = db.cursor()
+    cur.execute('SELECT COUNT(*) FROM todos')
+    todo_count = cur.fetchone()[0]
+    cur.execute('SELECT COUNT(*) FROM todos WHERE done = 1')
+    done_count = cur.fetchone()[0]
+    cur.execute('SELECT COUNT(*) FROM users')
+    user_count = cur.fetchone()[0]
+
+    uptime = round(time.time() - START_TIME, 1)
+
+    return PlainTextResponse(
+        f"""# HELP qtodo_todos_total Total todo items languishing in the database
+# TYPE qtodo_todos_total gauge
+qtodo_todos_total {todo_count}
+# HELP qtodo_todos_done_total Tasks heroically completed (server-side; localStorage not counted)
+# TYPE qtodo_todos_done_total gauge
+qtodo_todos_done_total {done_count}
+# HELP qtodo_users_total Users who trusted us with their passwords (hashed with SHA-256, sorry)
+# TYPE qtodo_users_total gauge
+qtodo_users_total {user_count}
+# HELP qtodo_uptime_seconds Seconds the server has been running without exploding
+# TYPE qtodo_uptime_seconds counter
+qtodo_uptime_seconds {uptime}
+# HELP qtodo_blockchain_anchors_total Tasks anchored on-chain (immutable, permanent, pointless)
+# TYPE qtodo_blockchain_anchors_total counter
+qtodo_blockchain_anchors_total 0
+# HELP qtodo_existential_dread Current level of existential dread (constant)
+# TYPE qtodo_existential_dread gauge
+qtodo_existential_dread 9.7
+# HELP qtodo_features_added_for_features_sake Features added purely to have something to present
+# TYPE qtodo_features_added_for_features_sake gauge
+qtodo_features_added_for_features_sake 14
+# HELP qtodo_lines_of_code_per_checkbox Lines of code required to render a checkbox
+# TYPE qtodo_lines_of_code_per_checkbox gauge
+qtodo_lines_of_code_per_checkbox 847
+""",
+        media_type='text/plain; version=0.0.4; charset=utf-8',
+    )
+
+
+@app.websocket('/ws')
+async def websocket_endpoint(ws: WebSocket):
+    """WebSocket endpoint.
+
+    This WebSocket connection exists primarily so the architecture diagram
+    has an arrow going somewhere dramatic. It echoes messages back and
+    occasionally reminds clients that nothing meaningful is happening.
+
+    Production note: zero clients have ever connected to this endpoint.
+    We feel this is a reasonable outcome.
+    """
+    await ws.accept()
+    logger.info('WebSocket client connected. Hello, lonely client.')
+    await ws.send_text(json.dumps({
+        'type': 'welcome',
+        'message': 'Connected to the QTodo event stream.',
+        'warning': 'This WebSocket does nothing useful. It exists for the architecture diagram.',
+        'existential_status': 'pending',
+        'tip': 'Try POST /health for something marginally more informative.',
+    }))
+    try:
+        while True:
+            data = await ws.receive_text()
+            logger.info('WebSocket received: %s (acknowledged, not acted upon)', data[:100])
+            await ws.send_text(json.dumps({
+                'type': 'echo',
+                'data': data,
+                'status': 'noted and ignored',
+                'recommendation': 'Consider a REST API. They return immediately.',
+            }))
+    except WebSocketDisconnect:
+        logger.info('WebSocket client disconnected. The void remains.')

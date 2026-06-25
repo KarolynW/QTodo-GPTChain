@@ -1,0 +1,20 @@
+{
+  "name": "QTodo GPTChain: The Todo App Nobody Asked For",
+  "short_name": "QTodo",
+  "description": "A blockchain-anchored, AI-haiku-generating, quantum-RNG-shuffled, OpenTimestamps-verified, EVM-anchored todo list. Just like Todoist, but worse.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#00ff41",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "screenshots": [],
+  "_comment": "This manifest file makes this a Progressive Web App. You can install it to your home screen. You should not install it to your home screen."
+}
