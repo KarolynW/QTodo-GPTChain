@@ -241,6 +241,14 @@ class UpgradeReq(BaseModel):
 class AnchorReq(BaseModel):
     hash: str
     ref: str
+    # Per-request EVM credentials — override server env vars for multi-tenant use.
+    # Users supply their own wallet and contract; we supply the ABI and the laughter.
+    rpc_url: str | None = None
+    private_key: str | None = None
+    contract_address: str | None = None
+    chain: str | None = None
+    explorer: str | None = None
+    mode: str | None = None
 
 class AnchorVerifyReq(BaseModel):
     hash: str
@@ -299,33 +307,49 @@ def upgrade(req: UpgradeReq):
 @app.post('/evm/anchor')
 def anchor(req: AnchorReq):
     logger.info('EVM anchor for %s', req.hash)
-    if not contract or not account:
-        logger.error('EVM not configured; hash %s will not achieve blockchain immortality today', req.hash)
-        raise HTTPException(status_code=500, detail='EVM not configured')
+
+    # Accept per-request credentials so each user can bring their own wallet.
+    # Fall back to server env vars if not provided — good for shared deployments
+    # where the operator pre-funds a wallet and users just hash things.
+    effective_rpc = req.rpc_url or RPC_URL
+    effective_key = req.private_key or PRIV_KEY
+    effective_contract = req.contract_address or CONTRACT_ADDR
+    effective_chain = req.chain or CHAIN_NAME
+    effective_explorer = req.explorer or EXPLORER
+    effective_mode = req.mode or EVM_MODE
+
+    if not effective_rpc or not effective_key or not effective_contract:
+        raise HTTPException(
+            status_code=500,
+            detail='EVM not configured. Set credentials in ⚙ Settings or ask the server operator.'
+        )
+
+    # Build a one-off web3 client from effective credentials.
+    w3 = Web3(Web3.HTTPProvider(effective_rpc))
+    acct = w3.eth.account.from_key(effective_key)
+    ctract = w3.eth.contract(address=effective_contract, abi=ABI)
+
     try:
-        nonce = web3.eth.get_transaction_count(account.address)
-        func = contract.functions.store if EVM_MODE != 'lite' else contract.functions.record
+        nonce = w3.eth.get_transaction_count(acct.address)
+        func = ctract.functions.store if effective_mode != 'lite' else ctract.functions.record
         txn = func(Web3.to_bytes(hexstr=req.hash), req.ref).build_transaction(
             {
-                'from': account.address,
+                'from': acct.address,
                 'nonce': nonce,
                 'gas': 100000,
-                'gasPrice': web3.eth.gas_price,
+                'gasPrice': w3.eth.gas_price,
             }
         )
-        signed = account.sign_transaction(txn)
-        # web3.py 7.x renamed rawTransaction → raw_transaction (snake_case).
-        # The previous code used rawTransaction and therefore never worked.
-        # In fairness, neither did anything else.
-        tx_hash = web3.eth.send_raw_transaction(signed.raw_transaction)
-        web3.eth.wait_for_transaction_receipt(tx_hash)
-        explorer = f"{EXPLORER}/tx/{tx_hash.hex()}" if EXPLORER else ''
+        signed = acct.sign_transaction(txn)
+        tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
+        w3.eth.wait_for_transaction_receipt(tx_hash)
+        explorer_link = f"{effective_explorer}/tx/{tx_hash.hex()}" if effective_explorer else ''
         logger.info('Anchored %s in tx %s — a miner has witnessed your procrastination', req.hash, tx_hash.hex())
         return {
             'tx': tx_hash.hex(),
-            'contract': CONTRACT_ADDR,
-            'chain': CHAIN_NAME,
-            'explorer': explorer,
+            'contract': effective_contract,
+            'chain': effective_chain,
+            'explorer': explorer_link,
         }
     except Exception:
         logger.exception('EVM anchor failed')
@@ -352,7 +376,7 @@ def verify_anchor(req: AnchorVerifyReq):
 
 
 @app.post('/users/register')
-def register(user: UserReq):
+def register(user: UserReq):  # noqa: F811
     # We hash passwords with SHA-256. This is infinitely better than plaintext
     # and approximately infinitely worse than bcrypt/argon2. Progress is a spectrum.
     # If you're reading this in a security audit: hi, sorry, this is satire.
@@ -364,6 +388,17 @@ def register(user: UserReq):
         return {'id': cur.lastrowid}
     except sqlite3.IntegrityError:
         raise HTTPException(status_code=400, detail='username taken')
+
+
+@app.post('/users/login')
+def login(user: UserReq):
+    hashed = hashlib.sha256(user.password.encode()).hexdigest()
+    cur = db.cursor()
+    cur.execute('SELECT id, username FROM users WHERE username = ? AND password = ?', (user.username, hashed))
+    row = cur.fetchone()
+    if not row:
+        raise HTTPException(status_code=401, detail='wrong credentials — the machine rejects you')
+    return {'user_id': row[0], 'username': row[1]}
 
 
 @app.post('/todos/add')
@@ -384,6 +419,26 @@ def list_todos(user_id: int):
         for r in rows
     ]
     return {'todos': todos}
+
+
+@app.put('/todos/{task_id}/done')
+def complete_todo(task_id: int):
+    cur = db.cursor()
+    cur.execute('UPDATE todos SET done = 1 WHERE id = ?', (task_id,))
+    if cur.rowcount == 0:
+        raise HTTPException(status_code=404, detail='task not found')
+    db.commit()
+    return {'ok': True, 'task_id': task_id}
+
+
+@app.delete('/todos/{task_id}')
+def delete_todo(task_id: int):
+    cur = db.cursor()
+    cur.execute('DELETE FROM todos WHERE id = ?', (task_id,))
+    if cur.rowcount == 0:
+        raise HTTPException(status_code=404, detail='task not found')
+    db.commit()
+    return {'ok': True, 'task_id': task_id}
 
 
 @app.get('/health')

@@ -1,0 +1,83 @@
+version: '3.9'
+
+# QTodo-GPTChain — the over-engineered todo list, now containerised.
+# Three services. One checkbox. Zero regrets.
+#
+# Quick start:
+#   docker compose up
+#   open http://localhost:3000
+#
+# With blockchain (optional — set your own creds in ⚙ Settings in the UI):
+#   EVM_RPC_URL=https://sepolia.base.org EVM_PRIVATE_KEY=0x... docker compose up
+
+services:
+
+  # ── Backend (FastAPI + SQLite + OTS + EVM) ────────────────────────────────
+  backend:
+    build: ./ots-server
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # Blockchain credentials — optional. Users can also supply their own
+      # per-request via ⚙ Settings in the frontend.
+      EVM_RPC_URL: ${EVM_RPC_URL:-}
+      EVM_PRIVATE_KEY: ${EVM_PRIVATE_KEY:-}
+      EVM_CONTRACT_ADDRESS: ${EVM_CONTRACT_ADDRESS:-}
+      EVM_CHAIN: ${EVM_CHAIN:-unknown}
+      EVM_EXPLORER: ${EVM_EXPLORER:-}
+      EVM_MODE: ${EVM_MODE:-lite}
+    volumes:
+      # SQLite persistence. In AWS this would be EFS. Here it's your laptop.
+      # Both are valid. Neither is Postgres. That's fine.
+      - sqlite_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Frontend (React + Vite → nginx) ───────────────────────────────────────
+  frontend:
+    build:
+      context: ./qtodo-gptchain
+      # VITE_OPENAI_API_KEY can be set here as a build arg for a shared deployment.
+      # For per-user keys, use ⚙ Settings in the UI — those go to localStorage only.
+      args:
+        VITE_OPENAI_API_KEY: ${VITE_OPENAI_API_KEY:-}
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  # ── MCP Server (agents connect here) ─────────────────────────────────────
+  # Exposes QTodo as MCP tools over SSE on port 8001.
+  # Claude Desktop users: see mcp-server/README.md for stdio config instead.
+  mcp-server:
+    build: ./mcp-server
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    environment:
+      QTODO_BACKEND_URL: http://backend:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  sqlite_data:
+    driver: local
+
+# Usage notes for the shady devops bro:
+#
+# Build images:     docker compose build
+# Start everything: docker compose up -d
+# View logs:        docker compose logs -f
+# Stop everything:  docker compose down
+# Nuke data:        docker compose down -v  (destroys the SQLite volume)
+#
+# To push images to ECR for AWS deployment, see terraform/ for the full setup.
+# Terraform will create ECS Fargate tasks, an ALB, and an EFS mount for SQLite.
+# It will also charge you money. We recommend setting billing alerts.

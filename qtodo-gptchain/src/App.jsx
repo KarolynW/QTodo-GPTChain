@@ -4,6 +4,7 @@ import { canonicalizeTask, sha256Hex } from './utils/ots'
 import { aiPriorityScore, priorityClass, TAGS } from './utils/priority'
 import Failure from './Failure'
 import MatrixRain from './MatrixRain'
+import SettingsModal, { getOpenAIKey, getEvmCreds } from './components/SettingsModal'
 import {
   createDefaultStats,
   recordEvent,
@@ -36,7 +37,7 @@ const fetchQuantumRandom = async (length) => {
 
 // Beg the AI for a haiku; if we can't afford the API key, just echo back the task.
 const generateHaiku = async (task) => {
-  const key = import.meta.env.VITE_OPENAI_API_KEY
+  const key = getOpenAIKey()
   if (!key) return task
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -72,9 +73,9 @@ const fetchVibe = async (tasks) => {
   if (active.length === 0) {
     return 'Your task list is empty. This is either a great accomplishment or a great denial. The AI cannot tell the difference. Neither can you.'
   }
-  const key = import.meta.env.VITE_OPENAI_API_KEY
+  const key = getOpenAIKey()
   if (!key) {
-    return 'Cannot assess vibe without VITE_OPENAI_API_KEY. Your vibe is: unobservable. Much like Schrödinger\'s productivity, you are simultaneously crushing it and completely failing until someone looks.'
+    return 'Cannot assess vibe without an OpenAI key. Set one in ⚙ Settings. Your vibe is: unobservable. Much like Schrödinger\'s productivity, you are simultaneously crushing it and completely failing until someone looks.'
   }
   const list = active.map(t => `• ${t.title}${t.tag ? ` [${t.tag}]` : ''}`).join('\n')
   try {
@@ -126,6 +127,7 @@ function App() {
   const [dragOver, setDragOver] = useState(null)
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
   const [wsStatus, setWsStatus] = useState('disconnected')
+  const [showSettings, setShowSettings] = useState(false)
 
   // Track the statistics of failure so we can quantify our despair.
   const [stats, setStats] = useState(() => {
@@ -362,10 +364,22 @@ function App() {
     const task = tasks[index]
     if (!task.otsMeta?.hash || !task.otsMeta?.ref) return
     try {
+      // Merge per-user EVM credentials from localStorage (if set) with the request.
+      // The backend falls back to its own env vars for any cred not provided here,
+      // so a user with no configured creds can still use server defaults if available.
+      const evmCreds = getEvmCreds()
+      const credPayload = {}
+      if (evmCreds.rpc_url) credPayload.rpc_url = evmCreds.rpc_url
+      if (evmCreds.private_key) credPayload.private_key = evmCreds.private_key
+      if (evmCreds.contract_address) credPayload.contract_address = evmCreds.contract_address
+      if (evmCreds.chain) credPayload.chain = evmCreds.chain
+      if (evmCreds.explorer) credPayload.explorer = evmCreds.explorer
+      if (evmCreds.mode) credPayload.mode = evmCreds.mode
+
       const res = await fetch('http://localhost:8000/evm/anchor', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hash: task.otsMeta.hash, ref: task.otsMeta.ref }),
+        body: JSON.stringify({ hash: task.otsMeta.hash, ref: task.otsMeta.ref, ...credPayload }),
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
@@ -589,6 +603,9 @@ function App() {
   return (
     <div className="text-center min-h-screen pb-12">
 
+      {/* ── Settings modal ── */}
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+
       {/* ── Top nav ── */}
       <div className="flex justify-end items-center space-x-2 p-2 flex-wrap gap-1">
         <button onClick={() => setView('tasks')} className="border px-2 py-1 text-xs">Tasks</button>
@@ -615,6 +632,13 @@ function App() {
           className="border border-red-400 px-2 py-1 text-xs text-red-400"
         >
           {punishmentMode ? '🌙 Dark' : '☀ Punish'}
+        </button>
+        <button
+          onClick={() => setShowSettings(true)}
+          title="Configure API keys and blockchain credentials"
+          className="border border-green-900 text-green-700 px-2 py-1 text-xs"
+        >
+          ⚙ Settings
         </button>
         <span
           title={`WebSocket status: ${wsStatus}`}
