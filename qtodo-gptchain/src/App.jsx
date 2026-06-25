@@ -601,57 +601,89 @@ function App() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="text-center min-h-screen pb-12">
-
-      {/* ── Settings modal ── */}
+    <div className="min-h-screen pb-16">
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
 
-      {/* ── Top nav ── */}
-      <div className="flex justify-end items-center space-x-2 p-2 flex-wrap gap-1">
-        <button onClick={() => setView('tasks')} className="border px-2 py-1 text-xs">Tasks</button>
-        <button onClick={() => setView('failure')} className="border px-2 py-1 text-xs">Failure</button>
-        <span className="border px-2 py-1 text-xs">Shame {stats.shame_points}</span>
-        <button
-          onClick={vibeCheck}
-          disabled={vibeLoading}
-          title="Ask AI to roast your task list"
-          className="border border-purple-400 px-2 py-1 text-xs text-purple-400"
-        >
-          {vibeLoading ? 'vibing…' : '✨ Vibe Check™'}
-        </button>
-        <button
-          onClick={enableNotifications}
-          title="Enable browser notifications for expiring tasks"
-          className={`border px-2 py-1 text-xs ${notificationsEnabled ? 'border-green-400' : 'border-yellow-600 text-yellow-500'}`}
-        >
-          {notificationsEnabled ? '🔔 On' : '🔕 Notify'}
-        </button>
-        <button
-          onClick={() => setPunishmentMode((p) => !p)}
-          title="Toggle Punishment Mode (Light Theme + Comic Sans)"
-          className="border border-red-400 px-2 py-1 text-xs text-red-400"
-        >
-          {punishmentMode ? '🌙 Dark' : '☀ Punish'}
-        </button>
-        <button
-          onClick={() => setShowSettings(true)}
-          title="Configure API keys and blockchain credentials"
-          className="border border-green-900 text-green-700 px-2 py-1 text-xs"
-        >
-          ⚙ Settings
-        </button>
-        <span
-          title={`WebSocket status: ${wsStatus}`}
-          className={`border px-2 py-1 text-xs ${wsStatus.startsWith('connected') ? 'border-green-500 text-green-500' : 'border-gray-700 text-gray-600'}`}
-        >
-          ws: {wsStatus.startsWith('connected') ? '●' : '○'}
-        </span>
+      {/* ── ASCII header + matrix rain ── */}
+      <div className="scanlines overflow-hidden" style={{ maxHeight: '120px' }}>
+        <MatrixRain width={900} height={80} className="w-full block" />
+        <div className="ascii-3d-wrapper -mt-20 relative z-10">
+          <pre className="ascii-3d">
+            {String.raw` ____  _____ ____   ___   ___   ___  ____  _____
+|  _ \| ____|  _ \ / _ \ / _ \ / _ \|  _ \| ____|
+| | | |  _| | |_) | | | | | | | | | | | | |  _|
+| |_| | |___|  __/| |_| | |_| | |_| | |_| | |___|
+|____/|_____|_|    \___/ \___/ \___/|____/|_____|`}
+          </pre>
+        </div>
       </div>
+      <div className="blink h-4" />
 
-      {/* ── Vibe oracle ── */}
-      {vibe && (
-        <div className="vibe-box text-sm text-purple-300 mx-auto">
-          🔮 {vibe}
+      {/* ── Nav ── */}
+      <nav className="terminal-nav">
+        <div className="nav-group">
+          <button onClick={() => setView('tasks')} className={`nav-btn ${view === 'tasks' ? 'nav-btn-active' : ''}`}>
+            Tasks
+          </button>
+          <button onClick={() => setView('failure')} className={`nav-btn ${view === 'failure' ? 'nav-btn-active' : ''}`}>
+            Failure
+          </button>
+          <span className="nav-divider" aria-hidden="true">│</span>
+          <span className="nav-stat" title="Shame points. They accumulate. They do nothing. They are there.">
+            shame: {stats.shame_points}
+          </span>
+        </div>
+        <div className="nav-group">
+          <button
+            onClick={vibeCheck}
+            disabled={vibeLoading}
+            title="Ask AI to roast your task list. Requires OpenAI key in ⚙ Settings."
+            className="nav-btn nav-btn-purple"
+          >
+            {vibeLoading ? 'vibing…' : '✨ Vibe Check™'}
+          </button>
+          <button
+            onClick={enableNotifications}
+            title={notificationsEnabled ? 'Notifications on' : 'Enable 30-min expiry warnings'}
+            className={`nav-btn ${notificationsEnabled ? 'nav-btn-green' : ''}`}
+          >
+            {notificationsEnabled ? '🔔 On' : '🔕 Notify'}
+          </button>
+          <button
+            onClick={() => setPunishmentMode((p) => !p)}
+            title="Punishment Mode: Comic Sans, white background, maximum regret"
+            className="nav-btn nav-btn-red"
+          >
+            {punishmentMode ? '🌙 Dark' : '☀ Punish'}
+          </button>
+          <button
+            onClick={() => setShowSettings(true)}
+            title="OpenAI key, EVM credentials, MetaMask contract deployment"
+            className="nav-btn"
+          >
+            ⚙ Settings
+          </button>
+          <span
+            className={`nav-ws ${wsStatus.startsWith('connected') ? 'nav-ws-on' : 'nav-ws-off'}`}
+            title={`WebSocket: ${wsStatus}`}
+          >
+            ws:{wsStatus.startsWith('connected') ? '●' : '○'}
+          </span>
+        </div>
+      </nav>
+
+      {/* ── Vibe panel ── */}
+      {(vibe || vibeLoading) && (
+        <div className="vibe-panel">
+          <div className="vibe-bar">
+            <span>🔮 VIBE_CHECK.EXE</span>
+            <button onClick={() => setVibe(null)} className="vibe-close" title="Dismiss">×</button>
+          </div>
+          <div className="vibe-body">
+            {vibeLoading
+              ? <span>▌ scanning task list for signs of life<span className="blink"> </span></span>
+              : vibe}
+          </div>
         </div>
       )}
 
@@ -659,160 +691,155 @@ function App() {
         <Failure stats={stats} resetStats={resetStats} exportCsv={exportCsv} />
       ) : (
         <>
-          {/* ── 3D ASCII header ── */}
-          <div className="scanlines mb-1 overflow-hidden" style={{ maxHeight: '150px' }}>
-            <MatrixRain width={700} height={90} className="mx-auto block" />
-            <div className="ascii-3d-wrapper -mt-20 relative z-10">
-              <pre className="ascii-3d">
-                {String.raw` ____  _____ ____   ___   ___   ___  ____  _____
-|  _ \| ____|  _ \ / _ \ / _ \ / _ \|  _ \| ____|
-| | | |  _| | |_) | | | | | | | | | | | | |  _|
-| |_| | |___|  __/| |_| | |_| | |_| | |_| | |___|
-|____/|_____|_|    \___/ \___/ \___/|____/|_____|`}
-              </pre>
+          {/* ── Input panel ── */}
+          <div className="app-panel">
+            <div className="tag-row">
+              <span className="panel-label">tag:</span>
+              {TAGS.map(({ emoji, label }) => (
+                <button
+                  key={emoji}
+                  onClick={() => setSelectedTag(emoji)}
+                  title={label}
+                  className={`tag-btn ${selectedTag === emoji ? 'tag-btn-active' : ''}`}
+                >
+                  {emoji}
+                </button>
+              ))}
             </div>
-          </div>
-          <div className="blink h-6 mb-4" />
-
-          {/* ── Tag picker ── */}
-          <div className="flex justify-center gap-1 mb-3 flex-wrap">
-            {TAGS.map(({ emoji, label }) => (
+            <div className="input-row">
+              <input
+                value={taskText}
+                onChange={(e) => setTaskText(e.target.value)}
+                onKeyDown={handleKeyDown}
+                className="terminal-input input-grow"
+                placeholder="New task"
+              />
+              <input
+                type="datetime-local"
+                aria-label="expiry"
+                value={expiryDate}
+                onChange={(e) => setExpiryDate(e.target.value)}
+                className="terminal-input"
+              />
+              <button onClick={addTask} className="action-btn action-primary">Add</button>
               <button
-                key={emoji}
-                onClick={() => setSelectedTag(emoji)}
-                title={label}
-                className={`border px-2 py-0.5 text-sm ${selectedTag === emoji ? 'border-green-400 bg-green-900' : 'border-gray-700'}`}
+                onClick={startVoiceInput}
+                title="Dictate your task. The machine will try to understand you."
+                className={`action-btn ${listening ? 'mic-listening' : ''}`}
+                aria-label="voice input"
               >
-                {emoji}
+                🎙 {listening ? 'listening…' : 'Voice'}
               </button>
-            ))}
-            <span className="text-xs text-gray-600 self-center ml-1">tag</span>
-          </div>
-
-          {/* ── Task input ── */}
-          <div className="flex flex-wrap justify-center gap-2 mb-4">
-            <input
-              value={taskText}
-              onChange={(e) => setTaskText(e.target.value)}
-              onKeyDown={handleKeyDown}
-              className="bg-black border border-green-500 px-2 py-1 text-sm"
-              placeholder="New task"
-              style={{ minWidth: '200px' }}
-            />
-            <input
-              type="datetime-local"
-              aria-label="expiry"
-              value={expiryDate}
-              onChange={(e) => setExpiryDate(e.target.value)}
-              className="bg-black border border-green-500 px-2 py-1 text-sm"
-            />
-            <button
-              onClick={addTask}
-              className="border border-green-500 px-2 py-1 text-sm"
-            >
-              Add
-            </button>
-            <button
-              onClick={startVoiceInput}
-              title="Dictate your task. The machine will try to understand you."
-              className={`border px-2 py-1 text-sm ${listening ? 'mic-listening' : 'border-green-700 text-green-700'}`}
-              aria-label="voice input"
-            >
-              🎙 {listening ? 'listening…' : 'Voice'}
-            </button>
-            <button
-              onClick={selfDestruct}
-              className="border border-red-500 px-2 py-1 text-sm text-red-400"
-            >
-              ☢ Self Destruct
-            </button>
+              <button onClick={selfDestruct} className="action-btn action-destruct">
+                ☢ Self Destruct
+              </button>
+            </div>
           </div>
 
           {/* ── Task list ── */}
-          <ul className="space-y-1 max-w-2xl mx-auto px-2">
-            {tasks.length === 0 && (
-              <li className="text-gray-600 text-sm italic py-4">
-                No tasks. Either you're done or you've given up. Only you know which.
-              </li>
-            )}
-            {tasks.map((task, index) => {
-              const isExpired = task.status === 'expired'
-              const score = aiPriorityScore(task)
-              const scoreClass = priorityClass(score)
-              return (
-                <li
-                  key={task.created_at}
-                  draggable={!isExpired}
-                  onDragStart={() => onDragStart(index)}
-                  onDragOver={(e) => onDragOver(e, index)}
-                  onDrop={() => onDrop(index)}
-                  onDragEnd={onDragEnd}
-                  className={[
-                    'flex items-center justify-center gap-1 flex-wrap text-sm py-1 cursor-grab',
-                    dragIndex === index ? 'task-drag-active' : '',
-                    dragOver === index && dragIndex !== index ? 'task-drop-target' : '',
-                  ].join(' ')}
-                >
-                  {/* Drag handle */}
-                  <span className="text-gray-700 select-none cursor-grab" title="Drag to reorder">⠿</span>
-
-                  <input
-                    type="checkbox"
-                    checked={task.completed}
-                    onChange={() => toggleTask(index)}
-                  />
-
-                  {/* Tag */}
-                  {task.tag && <span title={task.tag}>{task.tag}</span>}
-
-                  {/* Title */}
-                  <span className={task.completed ? 'line-through text-gray-600' : ''}>{task.title}</span>
-
-                  {/* AI Priority Score™ — fake but colour-coded, so it feels real */}
-                  {!isExpired && !task.completed && (
-                    <span
-                      className={`text-xs ${scoreClass} ml-1`}
-                      title={`AI Priority Score™: ${score}/99 (computed using quantum-informed heuristics)`}
-                    >
-                      [{score}]
-                    </span>
-                  )}
-
-                  <button
-                    onClick={() => deleteTask(index)}
-                    className="border border-red-800 px-1 text-red-700 text-xs"
-                    disabled={isExpired}
-                  >
-                    del
-                  </button>
-
-                  {/* Expired task: OTS controls */}
-                  {isExpired && (
-                    <div className="flex flex-wrap gap-1 ml-1 text-xs">
-                      <span className="border px-1 text-gray-500">{task.otsMeta?.hash?.slice(0, 8) || ''}</span>
-                      <button onClick={() => createProof(index)} className="border px-1">ots:create</button>
-                      <button onClick={() => verifyProof(index)} className="border px-1">ots:verify</button>
-                      <button onClick={() => upgradeProof(index)} className="border px-1">ots:upgrade</button>
-                      <button onClick={() => anchorOnChain(index)} className="border px-1">⛓ anchor</button>
-                      {task.otsMeta?.explorer && (
-                        <a href={task.otsMeta.explorer} target="_blank" rel="noopener noreferrer" className="underline">
-                          tx↗
-                        </a>
-                      )}
-                      {task.otsMeta?.lastVerification && <span className="text-yellow-600">{task.otsMeta.lastVerification}</span>}
-                      {task.otsMeta?.status && <span className="text-green-600">{task.otsMeta.status}</span>}
-                    </div>
-                  )}
+          <div className="app-panel">
+            <ul className="task-list">
+              {tasks.length === 0 && (
+                <li className="task-empty">
+                  No tasks. Either you're done or you've given up. Only you know which.
                 </li>
-              )
-            })}
-          </ul>
+              )}
+              {tasks.map((task, index) => {
+                const isExpired = task.status === 'expired'
+                const score = aiPriorityScore(task)
+                const scoreClass = priorityClass(score)
+                return (
+                  <li
+                    key={task.created_at}
+                    draggable={!isExpired}
+                    onDragStart={() => onDragStart(index)}
+                    onDragOver={(e) => onDragOver(e, index)}
+                    onDrop={() => onDrop(index)}
+                    onDragEnd={onDragEnd}
+                    className={[
+                      'task-card',
+                      isExpired ? 'task-is-expired' : '',
+                      task.completed ? 'task-is-done' : '',
+                      dragIndex === index ? 'task-drag-active' : '',
+                      dragOver === index && dragIndex !== index ? 'task-drop-target' : '',
+                    ].filter(Boolean).join(' ')}
+                  >
+                    <div className="task-primary">
+                      <span className="drag-grip" title="Drag to reorder">⠿</span>
+                      <input
+                        type="checkbox"
+                        checked={task.completed}
+                        onChange={() => toggleTask(index)}
+                        className="task-chk"
+                      />
+                      {task.tag && <span className="task-tag-chip">{task.tag}</span>}
+                      <span className={`task-title${task.completed ? ' line-through text-gray-600' : ''}`}>
+                        {task.title}
+                      </span>
+                      {!isExpired && !task.completed && (
+                        <span
+                          className={`score-chip ${scoreClass}`}
+                          title={`AI Priority Score™: ${score}/99 (computed using quantum-informed heuristics)`}
+                        >
+                          [{score}]
+                        </span>
+                      )}
+                      {isExpired && <span className="expired-chip">EXPIRED</span>}
+                      <button
+                        onClick={() => deleteTask(index)}
+                        className="del-btn"
+                        disabled={isExpired}
+                        title={isExpired ? 'Expired tasks cannot be deleted. They achieved permanence.' : 'Delete (unfinished = shame points)'}
+                      >
+                        del
+                      </button>
+                    </div>
 
-          {/* ── Architecture footnote ── */}
-          <p className="text-gray-800 text-xs mt-8 italic">
-            ws:{wsStatus} · tasks persisted in localStorage · synced via BroadcastChannel · shuffled by {' '}
-            <span title="or crypto.getRandomValues() if ANU is having a day">quantum RNG</span> · scored by{' '}
-            <span title="sin(created_at / 1000003) × urgency × complexity">AI™</span>
+                    <div className="task-secondary">
+                      {task.expired_at && (
+                        <span className={isExpired ? 'expiry-past' : 'expiry-future'}>
+                          {isExpired ? '⛔ expired' : '⏱ expires'}{' '}
+                          {new Date(task.expired_at).toLocaleString(undefined, {
+                            month: 'short', day: 'numeric', year: 'numeric',
+                            hour: '2-digit', minute: '2-digit',
+                          })}
+                        </span>
+                      )}
+                      {isExpired && (
+                        <div className="ots-row">
+                          {task.otsMeta?.hash && (
+                            <span className="ots-hash" title={task.otsMeta.hash}>
+                              #{task.otsMeta.hash.slice(0, 8)}
+                            </span>
+                          )}
+                          <button onClick={() => createProof(index)} className="ots-btn">ots:create</button>
+                          <button onClick={() => verifyProof(index)} className="ots-btn">ots:verify</button>
+                          <button onClick={() => upgradeProof(index)} className="ots-btn">ots:upgrade</button>
+                          <button onClick={() => anchorOnChain(index)} className="ots-btn">⛓ anchor</button>
+                          {task.otsMeta?.explorer && (
+                            <a href={task.otsMeta.explorer} target="_blank" rel="noopener noreferrer" className="ots-btn underline">
+                              tx↗
+                            </a>
+                          )}
+                          {task.otsMeta?.lastVerification && (
+                            <span className="text-yellow-600 text-xs">{task.otsMeta.lastVerification}</span>
+                          )}
+                          {task.otsMeta?.status && (
+                            <span className="text-green-500 text-xs">{task.otsMeta.status}</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+
+          <p className="footer-meta">
+            ws:{wsStatus} · localStorage · BroadcastChannel ·{' '}
+            <span title="or crypto.getRandomValues() if ANU is having a day">quantum RNG</span> ·{' '}
+            <span title="sin(created_at / 1000003) × urgency × complexity">AI™ scoring</span>
           </p>
         </>
       )}
