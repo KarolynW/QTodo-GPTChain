@@ -283,7 +283,8 @@ describe('App — Vibe Check™', () => {
     seedTasks([makeTask({ title: 'buy oat milk' })])
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /vibe check/i }))
-    await waitFor(() => expect(screen.getByText(/VITE_OPENAI_API_KEY/)).toBeInTheDocument(), { timeout: 3000 })
+    // Message now says "OpenAI key" + directs to ⚙ Settings instead of quoting the env var name
+    await waitFor(() => expect(screen.getByText(/OpenAI key|Settings|unobservable/i)).toBeInTheDocument(), { timeout: 3000 })
   })
 
   it('shows empty-task vibe when task list is empty', async () => {
@@ -332,5 +333,52 @@ describe('App — drag to reorder', () => {
       expect(saved[0].title).toBe('second')
       expect(saved[1].title).toBe('first')
     })
+  })
+})
+
+
+// ── Settings modal ────────────────────────────────────────────────────────────
+
+describe('App — Settings modal', () => {
+  it('renders a Settings button in the nav', () => {
+    render(<App />)
+    expect(screen.getByRole('button', { name: /settings/i })).toBeInTheDocument()
+  })
+
+  it('opens the settings modal when the Settings button is clicked', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /settings/i }))
+    // Modal heading is specific enough to assert on
+    expect(screen.getByText('⚙ Settings / Credentials')).toBeInTheDocument()
+    expect(screen.getByText(/Bring Your Own Key/i)).toBeInTheDocument()
+  })
+
+  it('closes the settings modal when the close button is clicked', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /settings/i }))
+    expect(screen.getByText(/Bring Your Own Key/i)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /close/i }))
+    expect(screen.queryByText(/Bring Your Own Key/i)).not.toBeInTheDocument()
+  })
+
+  it('saves an OpenAI key to localStorage', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /settings/i }))
+    const keyInput = screen.getByPlaceholderText(/sk-/i)
+    fireEvent.change(keyInput, { target: { value: 'sk-test-key-123' } })
+    fireEvent.click(screen.getByRole('button', { name: /^Save$/i }))
+    expect(localStorage.getItem('qtodo_openai_key')).toBe('sk-test-key-123')
+  })
+
+  it('saves EVM contract address to localStorage', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /settings/i }))
+    // Private key is type="password", contract address is type="text" — use that to tell them apart.
+    // Both have placeholder "0x..." which is why we can't use getByPlaceholderText alone.
+    const allHexInputs = screen.getAllByPlaceholderText('0x...')
+    const contractInput = allHexInputs.find(el => el.type === 'text')
+    fireEvent.change(contractInput, { target: { value: '0xdeadbeef' } })
+    fireEvent.click(screen.getByRole('button', { name: /^Save$/i }))
+    expect(localStorage.getItem('qtodo_evm_contract')).toBe('0xdeadbeef')
   })
 })

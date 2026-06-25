@@ -90,7 +90,7 @@ continues. The tasks do not get done.
 
 ## Feature Parade
 
-*48 passing tests. Zero tasks ever completed. We consider this a success.*
+*53 passing tests. Zero tasks ever completed. We consider this a success.*
 
 ### Core Nonsense
 
@@ -130,6 +130,24 @@ continues. The tasks do not get done.
   Export your shame as CSV for spreadsheet-mediated self-reflection.
 
 ### Modern Features (That Nobody Asked For)
+
+- **BYOK — Bring Your Own Key** — the app has a ⚙ Settings panel where users
+  enter their own OpenAI API key and EVM credentials. These live in
+  `localStorage`. They never reach our server. We don't have opinions about
+  your API key. We barely have a server. The MCP server also accepts per-request
+  EVM credentials, so your AI agents can spend your own gas money autonomously.
+
+- **MCP Server** — a Model Context Protocol server exposes QTodo as 11 tools
+  and 2 resources that AI agents can call natively. Connect Claude Desktop to
+  `mcp-server/server.py` (stdio) or `http://localhost:8001/sse` (SSE/Docker)
+  and your AI can add tasks, complete them, and anchor them on the blockchain
+  without you doing any of the above. The AI will complete the tasks. You will
+  claim credit. This is the productivity future.
+
+- **MetaMask Contract Deployment** — users can deploy `Anchor.sol` to any EVM
+  network directly from the ⚙ Settings panel via MetaMask. The ABI and bytecode
+  are pre-compiled and bundled. No terminal. No `solc`. One button. The contract
+  is now on the blockchain. It will outlive us all.
 
 - **Drag and drop reordering** — built with the HTML5 Drag and Drop API and
   a `useRef` to dodge stale closure bugs that would otherwise silently swap
@@ -205,7 +223,10 @@ continues. The tasks do not get done.
 | OTS | `opentimestamps-client` | Real Bitcoin proofs via calendar network. |
 | Blockchain | web3.py v7 + Solidity | L2 anchoring. Costs less than a coffee. Achieves similar clarity. |
 | RNG | ANU Quantum Vacuum API | Shuffles with vacuum noise. Falls back to OS entropy. |
-| Tests | Vitest + React Testing Library | 48 tests. All green. Tasks: still undone. |
+| MCP server | FastMCP (Python) | 11 tools, 2 resources, 0 tasks that complete themselves. |
+| Containers | Docker + Compose | Three services. One volume. All the irony. |
+| Cloud | Terraform + AWS ECS Fargate | Because S3 for a SQLite file felt too simple. |
+| Tests | Vitest + React Testing Library | 53 tests. All green. Tasks: still undone. |
 
 ---
 
@@ -213,13 +234,32 @@ continues. The tasks do not get done.
 
 *Three services. One task list. Zero regrets.*
 
-### Prerequisites
+### Option A: Docker (Recommended — Gets Everything Running in One Command)
 
+```bash
+docker compose up
+```
+
+- Frontend: `http://localhost:3000`
+- Backend: `http://localhost:8000`
+- MCP server: `http://localhost:8001/sse`
+
+Everything is configured. Nothing requires environment setup. Tasks persist
+in a named Docker volume. This is the correct way to run the app. All other
+options exist for people who enjoy prerequisites.
+
+For blockchain features, add your EVM credentials to `docker-compose.yml`
+or pass them per-request via ⚙ Settings. The server's defaults can be empty.
+Users can bring their own.
+
+### Option B: Manual (If You Enjoy Terminals)
+
+**Prerequisites:**
 - Node.js 20+
 - Python 3.11+
-- An existential tolerance for irony
+- An existential tolerance for configuration
 
-### Frontend
+**Frontend:**
 
 ```bash
 cd qtodo-gptchain
@@ -227,19 +267,14 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173). Marvel at the rotating 3D
-ASCII art and matrix rain. Then remember you came here to track tasks.
+Open `http://localhost:5173`. The matrix rain starts immediately.
+The ASCII art begins rotating. You will watch it for a moment before
+remembering why you opened the terminal.
 
-Optional: set a real OpenAI API key so the Vibe Check™ actually works:
+**API keys:** enter your OpenAI key in ⚙ Settings (stored in `localStorage`;
+the app never sends it to our server). No `.env.local` required.
 
-```bash
-echo "VITE_OPENAI_API_KEY=sk-..." > .env.local
-```
-
-Without the key the app displays a message explaining the situation with the
-same energy a doctor uses when delivering bad news.
-
-### Backend
+**Backend:**
 
 ```bash
 cd ots-server
@@ -247,14 +282,12 @@ pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
-The server starts on port 8000 and prints ASCII art to prove it has feelings.
-It creates `todo.db` in the same directory, which is SQLite, which is fine,
-which is actually fine, SQLite is fine.
+Port 8000. Creates `todo.db`. SQLite. Fine. Actually fine. SQLite has been
+fine since 2000. We've surrounded it with FastAPI, asyncio, web3.py, and
+OpenTimestamps but the core is SQLite and the core is fine.
 
-#### EVM anchoring (optional)
-
-To enable blockchain hash anchoring, set these environment variables before
-starting the server:
+**EVM anchoring** — optional; users can set credentials per-request in ⚙ Settings,
+or set server-wide defaults:
 
 ```bash
 export EVM_RPC_URL=https://sepolia.base.org
@@ -262,11 +295,38 @@ export EVM_PRIVATE_KEY=0x...
 export EVM_CONTRACT_ADDRESS=0x...
 export EVM_CHAIN=base-sepolia
 export EVM_EXPLORER=https://sepolia.basescan.org
-export EVM_MODE=lite   # or 'full' if you want permanence
+export EVM_MODE=lite   # or 'full' if you want on-chain storage
 ```
 
-The contract source is in `evm/Anchor.sol`. Deploy it once. Never look at it
-again. Know that it is there.
+**MCP server** (for AI agents):
+
+```bash
+cd mcp-server
+pip install -r requirements.txt
+python server.py                     # stdio mode, for Claude Desktop
+python server.py --transport sse     # HTTP/SSE mode, for remote agents
+```
+
+See `mcp-server/README.md` for Claude Desktop config.
+
+### Option C: AWS (For the Shady DevOps Friend)
+
+```bash
+cd terraform
+terraform init
+terraform apply \
+  -var="backend_image=your-ecr-uri/qtodo-backend:latest" \
+  -var="frontend_image=your-ecr-uri/qtodo-frontend:latest" \
+  -var="mcp_server_image=your-ecr-uri/qtodo-mcp:latest"
+```
+
+Infrastructure created: VPC, ECS Fargate cluster (FARGATE_SPOT to save money),
+ALB with path routing, EFS for SQLite persistence, Secrets Manager for the EVM
+private key, CloudWatch log groups, IAM roles, NAT gateway. The todo list will
+be on AWS. It will cost approximately $30/month. It stores tasks. The tasks
+will not be done. But they will be highly available.
+
+Output: `mcp_server_url` for Claude Desktop. Point it there. Let your agents in.
 
 ### Tests
 
@@ -275,9 +335,9 @@ cd qtodo-gptchain
 npm test
 ```
 
-Expected output: 48 tests, 4 test files, all green. The matrix rain will not
-render in jsdom and you will see canvas errors in stderr. This is fine. The
-rain is decorative. The tests do not need decoration.
+Expected output: **53 tests, 4 test files, all green.** Canvas errors in stderr
+are expected — the matrix rain doesn't render in jsdom and doesn't need to.
+The rain is not under test. The rain answers to no one.
 
 ---
 
@@ -290,12 +350,15 @@ rain is decorative. The tests do not need decoration.
 | `GET` | `/health` | Confirms the server is alive and philosophical |
 | `GET` | `/metrics` | Prometheus-format metrics including existential dread |
 | `POST` | `/users/register` | Create an account (`username`, `password`) |
+| `POST` | `/users/login` | Authenticate; returns `user_id` or 401 |
 | `POST` | `/todos/add` | Add a todo for a `user_id` |
 | `GET` | `/todos/{user_id}` | List todos for a user |
+| `PUT` | `/todos/{task_id}/done` | Mark a task complete |
+| `DELETE` | `/todos/{task_id}` | Delete a task |
 | `POST` | `/ots/create` | Submit a hash to OpenTimestamps calendars |
 | `POST` | `/ots/upgrade` | Upgrade a pending OTS proof |
 | `POST` | `/ots/verify` | Verify a finalised OTS proof |
-| `POST` | `/evm/anchor` | Anchor a hash on an EVM chain |
+| `POST` | `/evm/anchor` | Anchor a hash on an EVM chain (accepts per-request credentials) |
 | `POST` | `/evm/verify` | Verify an EVM-anchored hash (full mode) |
 | `WS` | `/ws` | Echo socket. Echoes. That is all. |
 
@@ -323,30 +386,48 @@ the matter.
 
 ```
 QTodo-GPTChain/
-├── README.md               ← you are here
-├── qtodo-gptchain/         ← React frontend
+├── README.md                    ← you are here; this document
+├── docker-compose.yml           ← three services, one command, zero config
+├── qtodo-gptchain/              ← React frontend
 │   ├── src/
-│   │   ├── App.jsx         ← 750 lines of unhinged features
-│   │   ├── App.test.jsx    ← 25 tests pretending to keep it honest
-│   │   ├── MatrixRain.jsx  ← canvas rain, obligatory
-│   │   ├── Failure.jsx     ← the shame dashboard
-│   │   ├── index.css       ← Tailwind v4, 3D keyframes, Comic Sans trap
-│   │   ├── priority.test.js ← 15 tests for the fake AI priority scorer
-│   │   ├── failure.test.js ← 4 tests for the shame tracker
-│   │   ├── ots.test.js     ← 4 tests for the crypto utils
+│   │   ├── App.jsx              ← ~900 lines of unhinged features
+│   │   ├── App.test.jsx         ← 30 integration tests (the honest ones)
+│   │   ├── MatrixRain.jsx       ← canvas rain; obligatory; non-negotiable
+│   │   ├── Failure.jsx          ← shame dashboard; CSV export; rank titles
+│   │   ├── index.css            ← Tailwind v4; 3D keyframes; Comic Sans trap
+│   │   ├── priority.test.js     ← 15 tests for the fake AI priority scorer
+│   │   ├── failure.test.js      ← 4 tests for the shame tracker
+│   │   ├── ots.test.js          ← 4 tests for the crypto utils
+│   │   ├── components/
+│   │   │   └── SettingsModal.jsx ← BYOK: OpenAI key, EVM creds, MetaMask deploy
 │   │   └── utils/
-│   │       ├── priority.js  ← aiPriorityScore, TAGS
-│   │       ├── failure.js   ← shame points, procrastination streaks
-│   │       └── ots.js       ← SHA-256, task canonicalisation
+│   │       ├── priority.js      ← aiPriorityScore(); TAGS; bracket labels
+│   │       ├── failure.js       ← shame points; procrastination streaks
+│   │       └── ots.js           ← SHA-256; task canonicalisation
 │   ├── public/
-│   │   ├── manifest.json   ← PWA manifest (snarky description)
-│   │   └── sw.js           ← service worker (network-first, obviously)
-│   └── vite.config.js      ← Tailwind v4 Vite plugin
+│   │   ├── manifest.json        ← PWA manifest (snarky description)
+│   │   ├── sw.js                ← service worker (network-first, obviously)
+│   │   └── Anchor.json          ← compiled Anchor.sol for MetaMask deployment
+│   ├── Dockerfile               ← node:22-alpine → nginx:alpine; two stages
+│   ├── nginx.conf               ← SPA routing; /api/ proxy; /ws WebSocket
+│   └── vite.config.js           ← @tailwindcss/vite; no other drama
 ├── ots-server/
-│   ├── main.py             ← FastAPI: OTS, EVM, SQLite, WebSocket, metrics
-│   └── requirements.txt    ← fastapi, uvicorn, opentimestamps-client, web3
-└── evm/
-    └── Anchor.sol          ← Solidity contract (lite + full modes)
+│   ├── main.py                  ← FastAPI: users, todos, OTS, EVM, metrics, ws
+│   ├── requirements.txt         ← fastapi, uvicorn, opentimestamps, web3, etc.
+│   └── Dockerfile               ← python:3.12-slim; /data for SQLite
+├── mcp-server/
+│   ├── server.py                ← FastMCP: 11 tools, 2 resources, 0 opinions
+│   ├── requirements.txt         ← mcp[cli], httpx
+│   ├── Dockerfile               ← python:3.12-slim; SSE transport default
+│   └── README.md                ← setup for Claude Desktop, Docker, AWS
+├── evm/
+│   ├── Anchor.sol               ← Solidity contract (lite + full modes)
+│   ├── Anchor.json              ← compiled ABI + bytecode (solc 0.8.20)
+│   └── README.md                ← documentation; sarcasm; gas cost estimates
+└── terraform/
+    ├── main.tf                  ← VPC, ECS, ALB, EFS, Secrets Manager, IAM
+    ├── variables.tf             ← all variables with snarky descriptions
+    └── outputs.tf               ← URLs, ARNs, and post-deploy instructions
 ```
 
 ---
@@ -354,22 +435,78 @@ QTodo-GPTChain/
 ## Easter Eggs
 
 - The `priorityClass` function never returns `priority-certain` because
-  certainty is not a feature we offer. This is in the tests.
+  certainty is not a feature we offer. This is in the tests. The tests pass.
+  The certainty is still not offered.
+
 - The metrics endpoint reports `qtodo_existential_dread 9.7`. This number was
   chosen because `10.0` would imply a maximum, and we are not done yet.
+  `qtodo_regret_coefficient 0.94` was calculated empirically.
+
 - Punishment Mode disables the matrix rain canvas. The Tailwind class that
   does this is `.punishment-mode canvas { display: none !important; }`.
-  The `!important` is load-bearing.
+  The `!important` is not stylistic. It is load-bearing.
+
 - The quantum RNG fallback logs: *"Quantum RNG unavailable. Degrading
-  gracefully to mere thermodynamic randomness."* This is the only log line
-  in the app that is both accurate and comforting.
+  gracefully to mere thermodynamic randomness."* This is the most accurate
+  log message in the codebase.
+
 - The WebSocket welcome message is: `"Welcome to QTodo-GPTChain WebSocket.
-  This connection serves no purpose. We appreciate your presence."` This is
-  also accurate.
+  This connection serves no purpose. We appreciate your presence."` The
+  frontend connects, receives this message, and displays a green dot. The
+  green dot is the entire value proposition of the WebSocket.
+
+- The MCP server's `anchor_hash_on_chain` tool can be called with an AI's
+  own credentials to anchor hashes on behalf of users. An AI agent can now
+  pay gas fees on your todo list. This sentence is true in 2026.
+
+- The health endpoint returns `"philosophical_note": "I think, therefore I persist."`.
+  The MCP resource `qtodo://health` includes this in the agent's context.
+  An agent will read this philosophical note and continue anchoring tasks
+  on the blockchain without comment. The agent has tasks to do.
+
+- `Anchor.json` is compiled Solidity bytecode bundled into the React app
+  and served as a static file so the browser can deploy smart contracts.
+  The first person who reads that sentence without blinking has found their
+  people. You are in the right repo.
+
+---
+
+## Deployment Checklist
+
+```
+[x] React 19 frontend with matrix rain
+[x] FastAPI backend with SQLite
+[x] OpenTimestamps for Bitcoin proofs
+[x] EVM anchoring with Solidity contract
+[x] Quantum RNG from ANU
+[x] AI priority scores (never 100)
+[x] Vibe Check™ (gpt-5.4-nano)
+[x] Voice input
+[x] Drag and drop reordering
+[x] Multi-tab sync via BroadcastChannel
+[x] PWA manifest + service worker
+[x] WebSocket that echoes
+[x] Punishment Mode (Comic Sans)
+[x] 3D animated ASCII art
+[x] Matrix rain (canvas)
+[x] Confetti (green + red)
+[x] Shame statistics + CSV export
+[x] Self-destruct button
+[x] Browser notifications
+[x] BYOK — Bring Your Own OpenAI Key
+[x] BYOK — Bring Your Own EVM credentials
+[x] MetaMask contract deployment from GUI
+[x] MCP server (11 tools, 2 resources)
+[x] Docker Compose (3 services)
+[x] Terraform (AWS ECS Fargate + full infra)
+[x] Prometheus metrics + health endpoint
+[x] 53 passing tests
+[ ] Tasks completed by user
+```
 
 ---
 
 *If you scrolled this far: the secret passphrase is
-`"nothing says productivity like twelve microservices"`.*
+`"nothing says productivity like seventeen microservices and an AI agent to manage them"`.*
 
-<!-- You have unlocked the hidden level. It contains only this comment. -->
+<!-- You have unlocked the hidden level. It is this comment. There is nothing else. The tasks remain undone. -->
