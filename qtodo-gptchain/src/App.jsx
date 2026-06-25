@@ -36,23 +36,22 @@ const fetchQuantumRandom = async (length) => {
 }
 
 // Beg the AI for a haiku; if we can't afford the API key, just echo back the task.
+// Uses the OpenAI Responses API (POST /v1/responses) — the new endpoint as of 2025.
+// Model: gpt-5.4-mini. Swap to gpt-5.4-nano below if you have access to it.
 const generateHaiku = async (task) => {
   const key = getOpenAIKey()
   if (!key) return task
   try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    const res = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${key}`,
       },
       body: JSON.stringify({
-        // gpt-4o-mini: cheap, fast, real. Unlike our ambitions.
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: 'Turn tasks into ambiguous haiku. Three lines. Cryptic but vaguely related.' },
-          { role: 'user', content: `Task: ${task}` },
-        ],
+        model: 'gpt-5.4-mini',
+        instructions: 'Turn tasks into ambiguous haiku. Three lines. Cryptic but vaguely related.',
+        input: `Task: ${task}`,
       }),
     })
     const data = await res.json()
@@ -60,7 +59,7 @@ const generateHaiku = async (task) => {
       console.error('OpenAI haiku error:', data.error.message)
       return task
     }
-    const content = data?.choices?.[0]?.message?.content
+    const content = data?.output?.[0]?.content?.[0]?.text
     return content?.trim() || task
   } catch (err) {
     console.error('OpenAI haiku request failed. Task will remain tragically literal.', err)
@@ -81,32 +80,27 @@ const fetchVibe = async (tasks) => {
   }
   const list = active.map(t => `• ${t.title}${t.tag ? ` [${t.tag}]` : ''}`).join('\n')
   try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    const res = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${key}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content:
-              'You are a brutally sarcastic productivity coach who cannot believe what you\'re reading. ' +
-              'Assess the user\'s task list vibe in exactly one devastating, funny sentence. ' +
-              'Be mean but accurate. Do not hold back. Reference specific tasks if possible.',
-          },
-          { role: 'user', content: `My current todo list:\n${list}` },
-        ],
-        max_tokens: 120,
+        model: 'gpt-5.4-mini',
+        instructions:
+          'You are a brutally sarcastic productivity coach who cannot believe what you\'re reading. ' +
+          'Assess the user\'s task list vibe in exactly one devastating, funny sentence. ' +
+          'Be mean but accurate. Do not hold back. Reference specific tasks if possible.',
+        input: `My current todo list:\n${list}`,
+        max_output_tokens: 120,
       }),
     })
     const data = await res.json()
     if (data.error) {
       return `AI says: "${data.error.message}" — fix your API key in ⚙ Settings and try again.`
     }
-    return data?.choices?.[0]?.message?.content?.trim() || 'The AI responded with a blank stare. Eerily relatable.'
+    return data?.output?.[0]?.content?.[0]?.text?.trim() || 'The AI responded with a blank stare. Eerily relatable.'
   } catch (err) {
     console.error('Vibe check failed', err)
     return `Vibe check failed (${err.message}). Even the AI gave up on you. That's actually impressive.`
