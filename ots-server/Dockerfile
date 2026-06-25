@@ -3,6 +3,11 @@ FROM python:3.12-slim
 # Because every production Dockerfile needs a comment explaining why
 # we're not using alpine. We're not using alpine because opentimestamps
 # builds native extensions and alpine's musl libc has opinions. Strong ones.
+#
+# curl is here for the health check. python:3.12-slim does not include it.
+# We discovered this the hard way, as is tradition.
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 COPY requirements.txt .
