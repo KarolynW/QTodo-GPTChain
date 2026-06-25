@@ -10,15 +10,27 @@ import {
 
 // Because using a normal pseudo-RNG just isn't pretentious enough.
 const fetchQuantumRandom = async (length) => {
-  // Make a totally reasonable network request to a quantum number generator
-  // because using Math.random() would obviously destroy the fabric of reality.
-  const res = await fetch(
-    `https://qrng.anu.edu.au/API/jsonI.php?length=${length}&type=uint8`,
-  )
-  // Parse the response, pretending we're not terrified of what the universe chose.
-  const data = await res.json()
-  // Return the array of numbers that will determine our fate for the day.
-  return data.data
+  try {
+    // Make a totally reasonable network request to a quantum number generator
+    // because using Math.random() would obviously destroy the fabric of reality.
+    const res = await fetch(
+      `https://qrng.anu.edu.au/API/jsonI.php?length=${length}&type=uint8`,
+    )
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    // Parse the response, pretending we're not terrified of what the universe chose.
+    const data = await res.json()
+    // Return the array of numbers that will determine our fate for the day.
+    return data.data
+  } catch (err) {
+    // The quantum number generator is offline, rate-limited, or has simply given up.
+    // We fall back to crypto.getRandomValues(), which is seeded by OS entropy —
+    // technically still quantum, if you squint and believe in physics.
+    // Schrödinger's shuffle: was it quantum? We'll never know. The cat is fine.
+    console.warn('Quantum RNG unavailable. Degrading gracefully to mere thermodynamic randomness.', err)
+    const buf = new Uint8Array(length)
+    crypto.getRandomValues(buf)
+    return Array.from(buf)
+  }
 }
 
 // Beg the AI for a haiku; if we can't afford the API key, just echo back the task.
@@ -311,25 +323,29 @@ function App() {
   const addTask = async () => {
     const text = taskText.trim()
     const expires = Date.parse(expiryDate)
-    if (text && expiryDate) {
-      const haiku = await generateHaiku(text)
-      setTasks([
-        ...tasks,
-        {
-          title: haiku,
-          note: '',
-          created_at: Date.now(),
-          expired_at: expires,
-          completed: false,
-          status: 'active',
-          user_id: 1,
-          version: 1,
-          otsMeta: {},
-        },
-      ])
-      setTaskText('')
-      setExpiryDate('')
+    // We require a deadline because accountability is the entire point of this app.
+    // Technically it's also the entire point of every todo app, yet here we are.
+    if (!text || !expiryDate) {
+      alert('Please enter a task and a deadline.\n\nYes, you need a deadline. That is the law.')
+      return
     }
+    const haiku = await generateHaiku(text)
+    setTasks([
+      ...tasks,
+      {
+        title: haiku,
+        note: '',
+        created_at: Date.now(),
+        expired_at: expires,
+        completed: false,
+        status: 'active',
+        user_id: 1,
+        version: 1,
+        otsMeta: {},
+      },
+    ])
+    setTaskText('')
+    setExpiryDate('')
   }
 
   const toggleTask = (index) => {
